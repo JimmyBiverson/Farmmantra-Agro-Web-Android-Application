@@ -3,6 +3,8 @@
 @section('page-title', 'All Orders')
 
 @section('content')
+@include('admin.partials.business-reset')
+
 <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
     <div class="card-stat text-center">
         <p class="text-lg sm:text-2xl font-bold" style="color:var(--text-primary)">{{ $summary['total'] }}</p>

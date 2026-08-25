@@ -2,7 +2,19 @@
 
 use App\Http\Controllers\WebController;
 use App\Http\Middleware\AuthenticateWeb;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/site-asset/{path}', function (string $path) {
+    $disk = Storage::disk('public');
+
+    abort_unless(str_starts_with($path, 'site/') && $disk->exists($path), 404);
+
+    return response()->file($disk->path($path), [
+        'Content-Type' => mime_content_type($disk->path($path)) ?: 'application/octet-stream',
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+    ]);
+})->where('path', '.*')->name('site.asset');
 
 Route::get('/', fn () => redirect()->route('web.dashboard'));
 
@@ -35,6 +47,7 @@ Route::middleware(AuthenticateWeb::class)->group(function () {
     Route::post('/admin/categories/update', [WebController::class, 'adminUpdateCategory'])->name('web.admin.categories.update');
     Route::post('/admin/categories/delete', [WebController::class, 'adminDeleteCategory'])->name('web.admin.categories.delete');
     Route::get('/admin/orders', [WebController::class, 'adminOrders'])->name('web.admin.orders');
+    Route::post('/admin/business-reset', [WebController::class, 'adminBusinessReset'])->name('web.admin.businessReset');
     Route::post('/admin/orders/{id}/approve', [WebController::class, 'adminApproveOrder'])->name('web.admin.orders.approve');
     Route::post('/admin/orders/{id}/decline', [WebController::class, 'adminDeclineOrder'])->name('web.admin.orders.decline');
     Route::get('/admin/payments', [WebController::class, 'adminPayments'])->name('web.admin.payments');

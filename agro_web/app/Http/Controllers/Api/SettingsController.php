@@ -35,7 +35,31 @@ class SettingsController extends Controller
             $settings[$key] = Setting::get($key);
         }
 
+        $settings['logo_url'] = $this->publicAssetUrl(
+            Setting::get('site_logo') ?: Setting::get('logo_url')
+        );
+        $settings['favicon_url'] = $this->publicAssetUrl(
+            Setting::get('site_favicon') ?: Setting::get('favicon_url')
+        );
+
         return response()->json(['data' => $settings]);
+    }
+
+    private function publicAssetUrl(?string $value): ?string
+    {
+        if (! $value) {
+            return null;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return $value;
+        }
+
+        if (str_starts_with($value, 'site/')) {
+            return route('site.asset', ['path' => $value]);
+        }
+
+        return url('/storage/'.ltrim($value, '/'));
     }
 
     /**

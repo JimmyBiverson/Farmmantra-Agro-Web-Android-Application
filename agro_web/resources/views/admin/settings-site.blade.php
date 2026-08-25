@@ -11,8 +11,8 @@
         ['route' => 'web.admin.settings.notifications', 'label' => 'Notifications', 'icon' => 'fa-bell'],
         ['route' => 'web.admin.settings.system', 'label' => 'System Info', 'icon' => 'fa-server'],
     ];
-    $hasLogo = !empty($site['site_logo']) && Storage::disk('public')->exists($site['site_logo']);
-    $hasFavicon = !empty($site['site_favicon']) && Storage::disk('public')->exists($site['site_favicon']);
+    $hasLogo = !empty($site['site_logo_url']);
+    $hasFavicon = !empty($site['site_favicon_url']);
 @endphp
 
 @section('content')
@@ -54,7 +54,7 @@
                         <div class="flex items-center gap-4 mb-4">
                             <div class="h-14 w-20 rounded-lg overflow-hidden border flex-shrink-0" style="border-color:var(--border-color); background:var(--bg-input)">
                                 @if($hasLogo)
-                                <img src="{{ asset('storage/'.$site['site_logo']) }}" alt="Logo" style="width:100%;height:100%;object-fit:contain;padding:0.25rem">
+                                <img src="{{ $site['site_logo_url'] }}" alt="Logo" style="width:100%;height:100%;object-fit:contain;padding:0.25rem">
                                 @else
                                 <div class="h-full w-full gradient-indigo flex items-center justify-center">
                                     <span class="text-white font-bold text-sm">FM</span>
@@ -92,7 +92,7 @@
                         <div class="flex items-center gap-4 mb-4">
                             <div class="h-10 w-10 rounded-lg overflow-hidden border flex-shrink-0" style="border-color:var(--border-color); background:var(--bg-input)">
                                 @if($hasFavicon)
-                                <img src="{{ asset('storage/'.$site['site_favicon']) }}" alt="Favicon" style="width:100%;height:100%;object-fit:contain;padding:0.25rem">
+                                <img src="{{ $site['site_favicon_url'] }}" alt="Favicon" style="width:100%;height:100%;object-fit:contain;padding:0.25rem">
                                 @else
                                 <div class="h-full w-full gradient-indigo flex items-center justify-center">
                                     <span class="text-white font-bold text-[10px]">FM</span>
@@ -129,8 +129,8 @@
                         <label class="block text-xs font-semibold mb-3" style="color:var(--text-secondary)">Social Sharing Image</label>
                         <div class="flex items-center gap-4 mb-4">
                             <div class="h-14 w-20 rounded-lg overflow-hidden border flex-shrink-0" style="border-color:var(--border-color); background:var(--bg-input)">
-                                @if(!empty($site['og_image']) && Storage::disk('public')->exists($site['og_image']))
-                                <img src="{{ asset('storage/'.$site['og_image']) }}" alt="OG" style="width:100%;height:100%;object-fit:cover">
+                                @if(!empty($site['og_image_url']))
+                                <img src="{{ $site['og_image_url'] }}" alt="OG" style="width:100%;height:100%;object-fit:cover">
                                 @else
                                 <div class="h-full w-full gradient-purple flex items-center justify-center">
                                     <i class="fas fa-share-nodes text-white text-sm"></i>
@@ -386,8 +386,12 @@
                             <div class="h-2.5 w-2.5 rounded-full bg-emerald-400"></div>
                         </div>
                         <div class="flex-1 flex items-center gap-2 rounded-lg px-3 py-1.5" style="background:var(--bg-card-solid); border:1px solid var(--border-color)">
-                            <div class="h-3 w-3 rounded-sm gradient-indigo flex items-center justify-center flex-shrink-0">
+                            <div class="h-3 w-3 rounded-sm overflow-hidden gradient-indigo flex items-center justify-center flex-shrink-0">
+                                @if(!empty($site['site_favicon_url']))
+                                <img src="{{ $site['site_favicon_url'] }}" alt="" class="h-full w-full object-contain">
+                                @else
                                 <span class="text-white text-[6px] font-bold">FM</span>
+                                @endif
                             </div>
                             <span class="text-xs font-medium truncate" style="color:var(--text-primary)">{{ $site['site_name'] ?? 'Farmmantra' }} — {{ $site['site_tagline'] ?? 'Agro Chemicals Limited' }}</span>
                             <i class="fas fa-lock text-[8px] ml-auto flex-shrink-0" style="color:var(--text-muted)"></i>
@@ -396,8 +400,14 @@
                     {{-- Link Preview Card --}}
                     <div class="rounded-lg overflow-hidden border" style="border-color:var(--border-color); background:var(--bg-card-solid)">
                         <div class="h-24 w-full gradient-indigo flex items-center justify-center relative overflow-hidden">
+                            @if(!empty($site['og_image_url']))
+                            <img src="{{ $site['og_image_url'] }}" alt="" class="absolute inset-0 h-full w-full object-cover">
+                            @elseif(!empty($site['site_logo_url']))
+                            <img src="{{ $site['site_logo_url'] }}" alt="" class="absolute inset-0 h-full w-full object-contain p-5">
+                            @else
                             <div class="absolute inset-0 opacity-20" style="background:linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.1) 50%, transparent 60%)"></div>
                             <span class="text-white font-bold text-xl relative z-10">{{ $site['site_name'] ?? 'Farmmantra' }}</span>
+                            @endif
                         </div>
                         <div class="p-3">
                             <p class="text-xs font-semibold mb-0.5 truncate" style="color:var(--text-primary)">{{ $site['site_name'] ?? 'Farmmantra' }} — {{ $site['site_tagline'] ?? 'Agro Chemicals Limited' }}</p>

@@ -8,6 +8,7 @@ use App\Models\PaymentSubmission;
 use App\Models\Setting;
 use App\Models\WarehouseInventory;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -32,6 +33,13 @@ class AppServiceProvider extends ServiceProvider
                 });
             } catch (\Throwable $e) {
                 $site = [];
+            }
+
+            foreach (['site_logo', 'site_favicon', 'og_image'] as $assetKey) {
+                if (!empty($site[$assetKey]) && Storage::disk('public')->exists($site[$assetKey])) {
+                    $version = Storage::disk('public')->lastModified($site[$assetKey]);
+                    $site[$assetKey.'_url'] = route('site.asset', ['path' => $site[$assetKey]]).'?v='.$version;
+                }
             }
 
             $view->with('site', $site);

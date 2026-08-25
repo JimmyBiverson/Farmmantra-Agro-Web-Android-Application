@@ -1,0 +1,21 @@
+# ============================================================
+# OPTIONAL helper for shared hosting where you CANNOT change
+# the document root to agro_web/public.
+#
+# Place this file in agro_web/ ONLY IF your domain points at
+# the agro_web folder itself. If your document root already
+# points at agro_web/public, DELETE this file - it is unused.
+#
+# It silently serves the site from public/ while keeping URLs clean.
+# ============================================================
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # NOTE: HTTPS redirect removed - server is currently a bare IP with no SSL.
+    # Re-add these 2 lines after installing an SSL certificate on a real domain:
+    # RewriteCond %{HTTPS} !=on
+    # RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+    # Serve everything from public/
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>

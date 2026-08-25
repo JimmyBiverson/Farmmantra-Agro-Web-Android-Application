@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/enums/user_role.dart';
 import '../../core/theme/app_colors.dart';
+import '../../models/site_settings.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/site_settings_provider.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -104,6 +106,13 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    var settings = SiteSettings.defaults;
+    try {
+      settings = context.watch<SiteSettingsProvider>().settings;
+    } on ProviderNotFoundException {
+      settings = SiteSettings.defaults;
+    }
+
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -209,11 +218,23 @@ class _SplashScreenState extends State<SplashScreen>
                             ),
                           ],
                         ),
-                        child: const Icon(
-                          Icons.eco_rounded,
-                          size: 72,
-                          color: Colors.white,
-                        ),
+                        child: settings.logoUrl != null
+                            ? Image.network(
+                                settings.logoUrl!,
+                                width: 90,
+                                height: 72,
+                                fit: BoxFit.contain,
+                                errorBuilder: (_, _, _) => const Icon(
+                                  Icons.eco_rounded,
+                                  size: 72,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Icon(
+                                Icons.eco_rounded,
+                                size: 72,
+                                color: Colors.white,
+                              ),
                       ),
                     ),
                   ),
@@ -227,8 +248,8 @@ class _SplashScreenState extends State<SplashScreen>
                     opacity: _textFade,
                     child: Column(
                       children: [
-                        const Text(
-                          AppConstants.appName,
+                        Text(
+                          settings.siteName,
                           style: TextStyle(
                             fontSize: 38,
                             fontWeight: FontWeight.w900,
@@ -249,8 +270,8 @@ class _SplashScreenState extends State<SplashScreen>
                               color: AppColors.accentGold.withAlpha(60),
                             ),
                           ),
-                          child: const Text(
-                            AppConstants.appTagline,
+                          child: Text(
+                            settings.siteTagline,
                             style: TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w400,

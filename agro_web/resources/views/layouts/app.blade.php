@@ -6,8 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') - {{ $site['site_name'] ?? 'Farmmantra' }}</title>
     {{-- Dynamic Favicon --}}
-    @if(!empty($site['site_favicon']) && \Illuminate\Support\Facades\Storage::disk('public')->exists($site['site_favicon']))
-    <link rel="icon" type="image/png" href="{{ asset('storage/'.$site['site_favicon']) }}">
+    @if(!empty($site['site_favicon_url']))
+    <link rel="icon" href="{{ $site['site_favicon_url'] }}">
     @else
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     @endif
@@ -17,16 +17,18 @@
     <meta property="og:description" content="{{ $site['site_tagline'] ?? 'Agro Chemicals Limited' }}">
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ url()->current() }}">
-    @if(!empty($site['site_logo']) && \Illuminate\Support\Facades\Storage::disk('public')->exists($site['site_logo']))
-    <meta property="og:image" content="{{ asset('storage/'.$site['site_logo']) }}">
-    @elseif(!empty($site['og_image']) && \Illuminate\Support\Facades\Storage::disk('public')->exists($site['og_image']))
-    <meta property="og:image" content="{{ asset('storage/'.$site['og_image']) }}">
+    @if(!empty($site['og_image_url']))
+    <meta property="og:image" content="{{ $site['og_image_url'] }}">
+    @elseif(!empty($site['site_logo_url']))
+    <meta property="og:image" content="{{ $site['site_logo_url'] }}">
     @endif
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="@yield('title', 'Dashboard') - {{ $site['site_name'] ?? 'Farmmantra' }}">
     <meta name="twitter:description" content="{{ $site['site_tagline'] ?? 'Agro Chemicals Limited' }}">
-    @if(!empty($site['og_image']) && \Illuminate\Support\Facades\Storage::disk('public')->exists($site['og_image']))
-    <meta name="twitter:image" content="{{ asset('storage/'.$site['og_image']) }}">
+    @if(!empty($site['og_image_url']))
+    <meta name="twitter:image" content="{{ $site['og_image_url'] }}">
+    @elseif(!empty($site['site_logo_url']))
+    <meta name="twitter:image" content="{{ $site['site_logo_url'] }}">
     @endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

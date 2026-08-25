@@ -4,13 +4,13 @@ class ApiEndpoints {
   // Chrome/web:      http://localhost:8000/api
   // Android emulator: http://10.0.2.2:8000/api
   // Physical device:  http://<your-pc-ip>:8000/api
-  // Production:       https://api.farmmantra.co.ug
+  // Production:       https://farmmantra.duckdns.org/api
   //
   // To switch: change the value below, or use --dart-define=API_BASE_URL=...
   // from the command line when building.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.1.131:8000/api',
+    defaultValue: 'https://farmmantra.duckdns.org/api',
   );
 
   // Auth

@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - {{ $site['site_name'] ?? 'Farmmantra' }}</title>
-    @if(!empty($site['site_favicon']) && \Illuminate\Support\Facades\Storage::disk('public')->exists($site['site_favicon']))
-    <link rel="icon" type="image/png" href="{{ asset('storage/'.$site['site_favicon']) }}">
+    @if(!empty($site['site_favicon_url']))
+    <link rel="icon" href="{{ $site['site_favicon_url'] }}">
     @endif
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -191,8 +191,8 @@
             {{-- Logo & Brand --}}<br>
             <div class="text-center m-8"  style="margin-left: 20px;">
                 <div class="brand-logo mx-auto mb-6 overflow-hidden">
-                    @if(!empty($site['site_logo']) && \Illuminate\Support\Facades\Storage::disk('public')->exists($site['site_logo']))
-                    <img src="{{ asset('storage/'.$site['site_logo']) }}" alt="{{ $site['site_name'] ?? 'FM' }}" class="h-full w-full object-contain p-1">
+                    @if(!empty($site['site_logo_url']))
+                    <img src="{{ $site['site_logo_url'] }}" alt="{{ $site['site_name'] ?? 'FM' }}" class="h-full w-full object-contain p-1">
                     @else
                     <span class="text-white font-black text-2xl tracking-tight">FM</span>
                     @endif

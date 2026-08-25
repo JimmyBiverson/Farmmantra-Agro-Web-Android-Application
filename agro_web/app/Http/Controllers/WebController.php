@@ -29,6 +29,7 @@ use App\Models\User;
 use App\Models\WarehouseInventory;
 use Illuminate\Support\Facades\DB;
 use App\Services\ActivityLogger;
+use App\Services\BusinessResetService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -229,6 +230,26 @@ class WebController extends Controller
         ];
 
         return view('admin.payments', compact('payments', 'summary'));
+    }
+
+    public function adminBusinessReset(Request $request, BusinessResetService $resetService)
+    {
+        $request->validate([
+            'confirmation' => ['required', 'in:START FRESH'],
+        ]);
+
+        $result = $resetService->reset();
+
+        ActivityLogger::log('business.reset', 'Business data reset by admin', null, auth()->id(), [
+            'total_deleted' => $result['total_deleted'],
+            'balances_reset' => $result['balances_reset'],
+        ]);
+
+        return redirect()->route('web.admin.orders')->with('success', sprintf(
+            'Fresh start complete: %d operational records cleared and %d franchise balances reset.',
+            $result['total_deleted'],
+            $result['balances_reset']
+        ));
     }
 
     public function adminReports(Request $request)
