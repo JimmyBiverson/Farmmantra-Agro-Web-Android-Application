@@ -6,9 +6,11 @@ use App\Models\Category;
 use App\Models\Franchise;
 use App\Models\PriceSlab;
 use App\Models\Product;
+use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
@@ -200,5 +202,15 @@ class DatabaseSeeder extends Seeder
         // Now run the dashboard data seeder for orders, sales, payments, inventory
         $this->call(DashboardDataSeeder::class);
         $this->call(SettingsSeeder::class);
+
+        // Link demo franchises to their business regions and make every
+        // account statement agree with the seeded balances.
+        foreach (['FRN-001' => 'Central', 'FRN-002' => 'Eastern'] as $code => $regionName) {
+            $regionId = Region::where('name', $regionName)->value('id');
+            if ($regionId) {
+                Franchise::where('code', $code)->whereNull('region_id')->update(['region_id' => $regionId]);
+            }
+        }
+        Artisan::call('ledger:sync-opening-balances');
     }
 }
