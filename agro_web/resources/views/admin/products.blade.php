@@ -54,6 +54,7 @@
                                 </div>
                                 @else
                                 <span class="font-semibold">UGX {{ number_format($p->standard_price) }}</span>
+                                <div class="text-[10px]" style="color:var(--text-muted)">R {{ number_format($p->retail_price) }} · F {{ number_format($p->farmer_unit_price) }}</div>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-sm text-right" style="color:var(--text-primary)">{{ number_format($p->warehouseInventory->quantity ?? 0) }}</td>
@@ -61,7 +62,7 @@
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-2">
                                     <button type="button" class="btn-action" title="Edit" style="color:var(--accent); background:rgba(99,102,241,0.12)"
-                                        @click="editProduct = {{ \Illuminate\Support\Js::from(['id' => $p->id, 'name' => $p->name, 'sku' => $p->sku, 'category_id' => $p->category_id ? (string) $p->category_id : '', 'unit_of_measure' => $p->unit_of_measure, 'selling_price' => (string) $p->selling_price, 'standard_price' => (string) $p->standard_price, 'packaging_details' => (string) $p->packaging_details, 'description' => (string) $p->description, 'image_url' => $p->image_url, 'gallery_images' => $p->images->map(fn($img) => ['id' => $img->id, 'url' => $img->image_url]), 'is_active' => (bool) $p->is_active, 'warehouse_qty' => $p->warehouseInventory ? (float) $p->warehouseInventory->quantity : 0, 'reorder_level' => $p->warehouseInventory ? (float) $p->warehouseInventory->reorder_level : 0, 'tax_enabled' => (bool) $p->tax_enabled, 'tax_type' => $p->tax_type ?? 'percentage', 'tax_rate' => (float) $p->tax_rate, 'tax_amount' => (float) $p->tax_amount, 'final_price' => (float) ($p->final_price ?? $p->standard_price)]) }}; editing = true">
+                                        @click="editProduct = {{ \Illuminate\Support\Js::from(['id' => $p->id, 'name' => $p->name, 'sku' => $p->sku, 'category_id' => $p->category_id ? (string) $p->category_id : '', 'unit_of_measure' => $p->unit_of_measure, 'selling_price' => (string) $p->selling_price, 'farmer_price' => (string) ($p->farmer_price ?? $p->selling_price), 'standard_price' => (string) $p->standard_price, 'packaging_details' => (string) $p->packaging_details, 'description' => (string) $p->description, 'image_url' => $p->image_url, 'gallery_images' => $p->images->map(fn($img) => ['id' => $img->id, 'url' => $img->image_url]), 'is_active' => (bool) $p->is_active, 'warehouse_qty' => $p->warehouseInventory ? (float) $p->warehouseInventory->quantity : 0, 'reorder_level' => $p->warehouseInventory ? (float) $p->warehouseInventory->reorder_level : 0, 'tax_enabled' => (bool) $p->tax_enabled, 'tax_type' => $p->tax_type ?? 'percentage', 'tax_rate' => (float) $p->tax_rate, 'tax_amount' => (float) $p->tax_amount, 'final_price' => (float) ($p->final_price ?? $p->standard_price)]) }}; editing = true">
                                         <i class="fas fa-pen"></i>
                                     </button>
                                     <form action="{{ route('web.admin.products.delete') }}" method="POST" class="inline" onsubmit="return confirm('Delete product {{ addslashes($p->name) }}?')">
@@ -230,16 +231,21 @@
                         <input type="text" name="unit_of_measure" required placeholder="e.g. Litre, Kg, Pack">
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Selling Price (UGX) *</label>
-                        <input type="number" name="selling_price" required min="0" placeholder="0">
+                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Franchise Price (UGX) *</label>
+                        <input type="number" name="standard_price" required min="0" placeholder="0" title="Price franchises pay Farmmantra (base price)">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Standard Price (UGX) *</label>
-                        <input type="number" name="standard_price" required min="0" placeholder="0">
+                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Retail Price (UGX) *</label>
+                        <input type="number" name="selling_price" required min="0" placeholder="0" title="Price franchises charge retailers">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Farmer Price (UGX)</label>
+                        <input type="number" name="farmer_price" min="0" placeholder="Same as retail" title="Price franchises charge farmers">
                     </div>
                 </div>
+                <p class="text-xs" style="color:var(--text-muted)">Franchises buy at the franchise price and can only sell at the retail or farmer price you set here.</p>
                 <div>
                     <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Packaging Details</label>
                     <input type="text" name="packaging_details" placeholder="e.g. 1L bottle, 5kg bag">
@@ -376,14 +382,18 @@
                         <input type="text" name="unit_of_measure" required x-model="editProduct.unit_of_measure">
                     </div>
                 </div>
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Selling Price (UGX) *</label>
+                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Franchise Price (UGX) *</label>
+                        <input type="number" name="standard_price" required min="0" x-model="editProduct.standard_price">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Retail Price (UGX) *</label>
                         <input type="number" name="selling_price" required min="0" x-model="editProduct.selling_price">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Standard Price (UGX) *</label>
-                        <input type="number" name="standard_price" required min="0" x-model="editProduct.standard_price">
+                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Farmer Price (UGX)</label>
+                        <input type="number" name="farmer_price" min="0" x-model="editProduct.farmer_price">
                     </div>
                 </div>
                 <div>

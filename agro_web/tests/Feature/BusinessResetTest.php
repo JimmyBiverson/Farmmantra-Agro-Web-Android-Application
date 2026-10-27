@@ -60,13 +60,24 @@ class BusinessResetTest extends TestCase
             'updated_at' => now(),
         ]);
 
+        // Security process: without the admin's password nothing happens.
+        $this->actingAs($admin)->post(route('web.admin.businessReset'), [
+            'confirmation' => 'START FRESH',
+            'action_reason' => 'Start of new financial year',
+        ])->assertSessionHas('error');
+        $this->assertDatabaseHas('orders', ['order_number' => 'ORD-TEST-001']);
+
         $this->actingAs($admin)->post(route('web.admin.businessReset'), [
             'confirmation' => 'WRONG PHRASE',
+            'confirm_password' => 'password',
+            'action_reason' => 'Start of new financial year',
         ])->assertSessionHasErrors('confirmation');
         $this->assertDatabaseHas('orders', ['order_number' => 'ORD-TEST-001']);
 
         $this->actingAs($admin)->post(route('web.admin.businessReset'), [
             'confirmation' => 'START FRESH',
+            'confirm_password' => 'password',
+            'action_reason' => 'Start of new financial year',
         ])->assertRedirect(route('web.admin.orders'));
 
         $this->assertDatabaseCount('orders', 0);

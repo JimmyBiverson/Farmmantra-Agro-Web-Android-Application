@@ -62,25 +62,12 @@
                         </td>
                         <td class="px-4 py-3 text-xs" style="color:var(--text-muted)">{{ $order->created_at->format('M d, Y') }}</td>
                         <td class="px-4 py-3 text-center">
-                            @if($order->status === 'pending')
                             <div class="flex items-center justify-center gap-1">
-                                <form action="{{ route('web.admin.orders.approve', $order->id) }}" method="POST" class="inline">
-                                    @csrf
-                                    <button type="submit" class="btn-action btn-approve" title="Approve">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                </form>
-                                <form action="{{ route('web.admin.orders.decline', $order->id) }}" method="POST" class="inline" onsubmit="return confirm('Decline order {{ $order->order_number }}?')">
-                                    @csrf
-                                    <input type="hidden" name="decline_reason" value="Declined by admin">
-                                    <button type="submit" class="btn-action btn-decline" title="Decline">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </form>
+                                @if($order->status === 'pending' || ($order->status === 'approved' && ! in_array($order->delivery_status, ['delivered', 'confirmed'])))
+                                <a href="{{ route('web.staff.orders', ['franchise_id' => $order->franchise_id, 'status' => $order->status]) }}" class="btn-action btn-approve" title="Accept / dispatch on the Dispatch Board"><i class="fas fa-truck-fast"></i></a>
+                                @endif
+                                <a href="{{ route('web.print', ['type' => 'order', 'id' => $order->id]) }}" target="_blank" class="btn-action" title="Print" style="color:var(--accent)"><i class="fas fa-print"></i></a>
                             </div>
-                            @else
-                            <span class="text-xs" style="color:var(--text-muted)">-</span>
-                            @endif
                         </td>
                     </tr>
                     @empty

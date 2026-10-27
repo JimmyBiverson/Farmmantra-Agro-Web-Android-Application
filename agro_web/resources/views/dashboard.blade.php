@@ -7,7 +7,7 @@
 
 @if($role === 'System Administrator')
     @include('partials.admin-dashboard')
-@elseif($role === 'Farmmantra Staff')
+@elseif(in_array($role, ['Farmmantra Staff', 'Warehouse']))
     @include('partials.staff-dashboard')
 @elseif($role === 'Finance Department')
     @include('partials.finance-dashboard')

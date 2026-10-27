@@ -9,9 +9,11 @@
     <div class="card-full">
         <div class="card-header">
             <h3 class="text-sm font-semibold" style="color:var(--text-primary)">Warehouse Inventory ({{ $stock->count() }} products)</h3>
+            @if(auth()->user()->canManageOrders())
             <button @click="open = true" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-xs font-semibold hover:bg-indigo-700 transition">
                 <i class="fas fa-arrow-up mr-1"></i> Update Stock
             </button>
+            @endif
         </div>
         <div class="card-body p-0">
             <div class="overflow-x-auto">
@@ -62,7 +64,7 @@
                 </div>
                 <button @click="open = false" class="btn-delete" style="color:var(--text-muted);width:2rem;height:2rem"><i class="fas fa-times"></i></button>
             </div>
-            <form action="{{ route('web.staff.inventory.update') }}" method="POST" class="space-y-4">
+            <form action="{{ route('web.ops.inventory.update') }}" method="POST" class="space-y-4">
                 @csrf
                 <div>
                     <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Product *</label>

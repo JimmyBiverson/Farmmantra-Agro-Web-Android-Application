@@ -51,6 +51,26 @@
             </a>
         </li>
         <li>
+            <a href="{{ route('web.admin.customers') }}" class="sidebar-link {{ str_starts_with($current, 'web.admin.customers') ? 'active' : '' }}">
+                <i class="fas fa-people-group w-5 text-center text-sm"></i> Customers
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.admin.regions') }}" class="sidebar-link {{ str_starts_with($current, 'web.admin.regions') ? 'active' : '' }}">
+                <i class="fas fa-map-location-dot w-5 text-center text-sm"></i> Regions & Districts
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.admin.sms') }}" class="sidebar-link {{ str_starts_with($current, 'web.admin.sms') ? 'active' : '' }}">
+                <i class="fas fa-comment-sms w-5 text-center text-sm"></i> Bulk SMS
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.support.tickets') }}" class="sidebar-link {{ str_starts_with($current, 'web.support') ? 'active' : '' }}">
+                <i class="fas fa-life-ring w-5 text-center text-sm"></i> Support Tickets
+            </a>
+        </li>
+        <li>
             <a href="{{ route('web.admin.chat') }}" class="sidebar-link {{ str_starts_with($current, 'web.admin.chat') ? 'active' : '' }}">
                 <i class="fas fa-comments w-5 text-center text-sm"></i> Support Chat
             </a>
@@ -80,6 +100,11 @@
             </a>
         </li>
         <li>
+            <a href="{{ route('web.staff.orders') }}" class="sidebar-link {{ str_starts_with($current, 'web.staff.order') ? 'active' : '' }}">
+                <i class="fas fa-truck-fast w-5 text-center text-sm"></i> Dispatch Board
+            </a>
+        </li>
+        <li>
             <a href="{{ route('web.admin.payments') }}" class="sidebar-link {{ str_starts_with($current, 'web.admin.payment') ? 'active' : '' }}">
                 <i class="fas fa-money-bill-wave w-5 text-center text-sm"></i> Payments
                 @if($pending_payments > 0)
@@ -93,6 +118,21 @@
         <li>
             <a href="{{ route('web.admin.reports') }}" class="sidebar-link {{ str_starts_with($current, 'web.admin.report') ? 'active' : '' }}">
                 <i class="fas fa-chart-bar w-5 text-center text-sm"></i> Reports
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.accounts.statements') }}" class="sidebar-link {{ str_starts_with($current, 'web.accounts.statement') ? 'active' : '' }}">
+                <i class="fas fa-file-invoice-dollar w-5 text-center text-sm"></i> Account Statements
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.accounts.creditNotes') }}" class="sidebar-link {{ str_starts_with($current, 'web.accounts.creditNote') ? 'active' : '' }}">
+                <i class="fas fa-rotate-left w-5 text-center text-sm"></i> Credit Notes & Returns
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.reports.stock') }}" class="sidebar-link {{ str_starts_with($current, 'web.reports.stock') ? 'active' : '' }}">
+                <i class="fas fa-warehouse w-5 text-center text-sm"></i> Stock Reports
             </a>
         </li>
         <li>
@@ -131,6 +171,11 @@
 
         <li><div class="sidebar-section">System</div></li>
         <li>
+            <a href="{{ route('web.admin.terms') }}" class="sidebar-link {{ str_starts_with($current, 'web.admin.terms') ? 'active' : '' }}">
+                <i class="fas fa-file-signature w-5 text-center text-sm"></i> Terms & Operations
+            </a>
+        </li>
+        <li>
             <a href="{{ route('web.admin.settings.general') }}" class="sidebar-link {{ request()->routeIs('web.admin.settings.*') ? 'active' : '' }}">
                 <i class="fas fa-cog w-5 text-center text-sm"></i> Settings
             </a>
@@ -138,8 +183,8 @@
         @endif
 
         {{-- ═══ STAFF ═══ --}}
-        @if($role === 'Farmmantra Staff')
-        <li><div class="sidebar-section">Operations</div></li>
+        @if(in_array($role, ['Farmmantra Staff', 'Warehouse']))
+        <li><div class="sidebar-section">{{ $role === 'Warehouse' ? 'Warehouse' : 'Monitoring' }}</div></li>
         <li>
             <a href="{{ route('web.staff.orders') }}" class="sidebar-link {{ str_starts_with($current, 'web.staff.order') ? 'active' : '' }}">
                 <i class="fas fa-clipboard-list w-5 text-center text-sm"></i> Orders
@@ -163,6 +208,16 @@
                 <i class="fas fa-truck-ramp-box w-5 text-center text-sm"></i> Stock Receipts
             </a>
         </li>
+        <li>
+            <a href="{{ route('web.reports.stock') }}" class="sidebar-link {{ str_starts_with($current, 'web.reports.stock') ? 'active' : '' }}">
+                <i class="fas fa-file-lines w-5 text-center text-sm"></i> Stock Reports
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.support.tickets') }}" class="sidebar-link {{ str_starts_with($current, 'web.support') ? 'active' : '' }}">
+                <i class="fas fa-life-ring w-5 text-center text-sm"></i> Support Tickets
+            </a>
+        </li>
         @endif
 
         {{-- ═══ FINANCE ═══ --}}
@@ -177,8 +232,23 @@
             </a>
         </li>
         <li>
+            <a href="{{ route('web.accounts.statements') }}" class="sidebar-link {{ str_starts_with($current, 'web.accounts.statement') ? 'active' : '' }}">
+                <i class="fas fa-file-invoice-dollar w-5 text-center text-sm"></i> Account Statements
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.accounts.creditNotes') }}" class="sidebar-link {{ str_starts_with($current, 'web.accounts.creditNote') ? 'active' : '' }}">
+                <i class="fas fa-rotate-left w-5 text-center text-sm"></i> Credit Notes & Returns
+            </a>
+        </li>
+        <li>
             <a href="{{ route('web.finance.reports') }}" class="sidebar-link {{ str_starts_with($current, 'web.finance.report') ? 'active' : '' }}">
                 <i class="fas fa-chart-pie w-5 text-center text-sm"></i> Reports
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.support.tickets') }}" class="sidebar-link {{ str_starts_with($current, 'web.support') ? 'active' : '' }}">
+                <i class="fas fa-life-ring w-5 text-center text-sm"></i> Support Tickets
             </a>
         </li>
         @endif
@@ -210,8 +280,28 @@
             </a>
         </li>
         <li>
+            <a href="{{ route('web.franchise.statement') }}" class="sidebar-link {{ str_starts_with($current, 'web.franchise.statement') ? 'active' : '' }}">
+                <i class="fas fa-file-invoice-dollar w-5 text-center text-sm"></i> Account Statement
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.reports.stock') }}" class="sidebar-link {{ str_starts_with($current, 'web.reports.stock') ? 'active' : '' }}">
+                <i class="fas fa-file-lines w-5 text-center text-sm"></i> Stock Report
+            </a>
+        </li>
+        <li>
             <a href="{{ route('web.franchise.chat') }}" class="sidebar-link {{ str_starts_with($current, 'web.franchise.chat') ? 'active' : '' }}">
                 <i class="fas fa-comments w-5 text-center text-sm"></i> Messages
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.support.tickets') }}" class="sidebar-link {{ str_starts_with($current, 'web.support') ? 'active' : '' }}">
+                <i class="fas fa-life-ring w-5 text-center text-sm"></i> Support Tickets
+            </a>
+        </li>
+        <li>
+            <a href="{{ route('web.terms.show') }}" class="sidebar-link {{ str_starts_with($current, 'web.terms') ? 'active' : '' }}">
+                <i class="fas fa-file-signature w-5 text-center text-sm"></i> Terms & Conditions
             </a>
         </li>
         @endif
@@ -244,3 +334,7 @@
         </a>
     </div>
 </nav>
+
+@if($role === 'System Administrator')
+@include('partials.secure-delete')
+@endif

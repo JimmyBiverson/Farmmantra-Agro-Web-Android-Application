@@ -48,11 +48,6 @@
                                             <i class="fas {{ $u->is_active ? 'fa-user-slash' : 'fa-user-check' }}"></i>
                                         </button>
                                     </form>
-                                    <form action="{{ route('web.admin.users.delete') }}" method="POST" class="inline" onsubmit="return confirm('Delete user {{ addslashes($u->name) }}?')">
-                                        @csrf
-                                        <input type="hidden" name="id" value="{{ $u->id }}">
-                                        <button type="submit" class="btn-delete"><i class="fas fa-trash-can text-xs"></i></button>
-                                    </form>
                                 </div>
                                 @else
                                 <span class="text-xs" style="color:var(--text-muted)">You</span>

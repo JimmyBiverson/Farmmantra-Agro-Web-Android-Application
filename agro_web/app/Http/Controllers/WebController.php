@@ -2,10 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Web\HandlesWebActions;
 use App\Models\ActivityLog;
 use App\Models\Category;
 use App\Models\Conversation;
 use App\Models\Customer;
+use App\Models\District;
 use App\Models\Faq;
 use App\Models\Franchise;
 use App\Models\FranchiseInventory;
@@ -17,6 +19,7 @@ use App\Models\PaymentSubmission;
 use App\Models\PriceSlab;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Models\Region;
 use App\Models\Role;
 use App\Models\Sale;
 use App\Models\SaleItem;
@@ -29,6 +32,9 @@ use App\Models\User;
 use App\Models\WarehouseInventory;
 use App\Services\ActivityLogger;
 use App\Services\BusinessResetService;
+use App\Services\OrderService;
+use App\Services\PaymentService;
+use App\Services\SaleService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,6 +46,8 @@ use Illuminate\Validation\ValidationException;
 
 class WebController extends Controller
 {
+    use HandlesWebActions;
+
     public function showLogin()
     {
         if (Auth::check()) {
@@ -99,6 +107,7 @@ class WebController extends Controller
                 'total_users' => User::count(),
                 'pending_orders' => Order::where('status', 'pending')->count(),
                 'pending_payments' => PaymentSubmission::where('status', 'pending')->count(),
+                'overdue_dispatch_orders' => Order::dispatchOverdue()->count(),
                 'total_sales_this_month' => Sale::whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year)->sum('final_amount'),
                 'total_sales_last_month' => Sale::whereMonth('sale_date', $now->copy()->subMonth()->month)->whereYear('sale_date', $now->copy()->subMonth()->year)->sum('final_amount'),
                 'total_sales_ytd' => Sale::whereYear('sale_date', $now->year)->sum('final_amount'),
@@ -113,11 +122,13 @@ class WebController extends Controller
             $dashboard['recent_orders'] = Order::with(['franchise:id,name,code', 'items.product:id,name'])->latest()->limit(10)->get();
             $dashboard['franchise_performance'] = Franchise::select('franchises.*')->withCount(['orders as total_orders' => fn ($q) => $q->whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)])->withSum(['orders as total_order_value' => fn ($q) => $q->whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)], 'total_amount')->withCount(['sales as total_sales_count' => fn ($q) => $q->whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year)])->withSum(['sales as total_sales_value' => fn ($q) => $q->whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year)], 'final_amount')->orderByDesc('total_sales_value')->get();
             $dashboard['order_status_breakdown'] = Order::select('status', DB::raw('COUNT(*) as count'))->groupBy('status')->get();
-        } elseif ($role === 'Farmmantra Staff') {
+        } elseif (in_array($role, ['Farmmantra Staff', 'Warehouse'], true)) {
             $dashboard['summary'] = [
                 'pending_orders' => Order::where('status', 'pending')->count(),
                 'approved_orders_today' => Order::where('status', 'approved')->whereDate('approved_at', $now->toDateString())->count(),
                 'total_orders_this_month' => Order::whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)->count(),
+                'overdue_dispatch_orders' => Order::dispatchOverdue()->count(),
+                'awaiting_dispatch' => Order::where('status', 'approved')->whereNull('dispatched_at')->whereNotIn('delivery_status', ['out_for_delivery', 'delivered', 'confirmed'])->count(),
                 'declined_orders_this_month' => Order::where('status', 'declined')->whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)->count(),
                 'total_orders_value_this_month' => Order::whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)->sum('total_amount'),
                 'low_stock_products' => WarehouseInventory::whereColumn('quantity', '<=', 'reorder_level')->count(),
@@ -146,6 +157,9 @@ class WebController extends Controller
             $dashboard['summary'] = [
                 'total_sales_this_month' => Sale::where('franchise_id', $franchiseId)->whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year)->sum('final_amount'),
                 'total_sales_ytd' => Sale::where('franchise_id', $franchiseId)->whereYear('sale_date', $now->year)->sum('final_amount'),
+                'sales_count_this_month' => Sale::where('franchise_id', $franchiseId)->whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year)->count(),
+                'profit_this_month' => (float) Sale::where('franchise_id', $franchiseId)->whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year)->sum('final_amount') - (float) Sale::where('franchise_id', $franchiseId)->whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year)->sum('total_cost'),
+                'awaiting_acceptance' => Order::where('franchise_id', $franchiseId)->whereIn('delivery_status', ['out_for_delivery', 'delivered'])->count(),
                 'total_inventory_value' => FranchiseInventory::where('franchise_id', $franchiseId)->sum('total_value'),
                 'pending_orders' => Order::where('franchise_id', $franchiseId)->where('status', 'pending')->count(),
                 'pending_payments' => PaymentSubmission::where('franchise_id', $franchiseId)->where('status', 'pending')->count(),
@@ -164,7 +178,7 @@ class WebController extends Controller
 
                 return ['target_id' => $target->id, 'category' => $target->productCategory?->name ?? 'All Products', 'target_amount' => $target->target_amount, 'actual_amount' => $actual, 'achievement_percentage' => $target->target_amount > 0 ? round(($actual / $target->target_amount) * 100, 1) : 0];
             });
-            $dashboard['inventory_status'] = FranchiseInventory::where('franchise_id', $franchiseId)->with('product:id,name,sku,selling_price')->get()->map(fn ($item) => ['product_name' => $item->product?->name, 'sku' => $item->product?->sku, 'quantity' => $item->quantity, 'reorder_level' => $item->reorder_level, 'is_low_stock' => $item->quantity <= $item->reorder_level, 'value' => $item->quantity * ($item->product?->selling_price ?? 0)]);
+            $dashboard['inventory_status'] = FranchiseInventory::where('franchise_id', $franchiseId)->with('product:id,name,sku,standard_price')->get()->map(fn ($item) => ['product_name' => $item->product?->name, 'sku' => $item->product?->sku, 'quantity' => $item->quantity, 'reorder_level' => $item->reorder_level, 'is_low_stock' => $item->quantity <= $item->reorder_level, 'value' => $item->quantity * ($item->product?->standard_price ?? 0)]);
         }
 
         return view('dashboard', compact('dashboard'));
@@ -742,13 +756,6 @@ class WebController extends Controller
     }
 
     // ── Staff Pages ──────────────────────────────────────────
-    public function staffOrders()
-    {
-        $orders = Order::with(['franchise', 'items.product', 'orderedByUser'])->latest()->paginate(20);
-
-        return view('staff.orders', compact('orders'));
-    }
-
     public function staffInventory()
     {
         $stock = WarehouseInventory::with('product:id,name,sku,unit_of_measure')->get();
@@ -925,6 +932,7 @@ class WebController extends Controller
             'category_id' => 'required|exists:categories,id',
             'unit_of_measure' => 'required|string|max:50',
             'selling_price' => 'required|numeric|min:0',
+            'farmer_price' => 'nullable|numeric|min:0',
             'standard_price' => 'required|numeric|min:0',
             'packaging_details' => 'nullable|string|max:255',
             'description' => 'nullable|string',
@@ -935,6 +943,7 @@ class WebController extends Controller
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
         $data = $request->only('name', 'sku', 'category_id', 'unit_of_measure', 'selling_price', 'standard_price', 'packaging_details', 'description');
+        $data['farmer_price'] = $request->filled('farmer_price') ? $request->farmer_price : $request->selling_price;
 
         $taxEnabled = $request->boolean('tax_enabled');
         $taxType = $request->input('tax_type', 'percentage');
@@ -991,21 +1000,15 @@ class WebController extends Controller
         return redirect()->route('web.admin.products')->with('success', 'Product created successfully!');
     }
 
+    /** Products are never hard-deleted (order history depends on them); they are deactivated. */
     public function adminDeleteProduct(Request $request)
     {
         $request->validate(['id' => 'required|exists:products,id']);
-        $product = Product::with('images')->findOrFail($request->id);
-        if ($product->image) {
-            Storage::disk('public')->delete($product->image);
-        }
-        foreach ($product->images as $img) {
-            if ($img->image_path) {
-                Storage::disk('public')->delete($img->image_path);
-            }
-        }
-        $product->delete();
+        $product = Product::findOrFail($request->id);
+        $product->update(['is_active' => false]);
+        ActivityLogger::log('product.deactivated', "Product {$product->name} deactivated: ".$request->input('action_reason'), $product);
 
-        return redirect()->route('web.admin.products')->with('success', 'Product deleted.');
+        return redirect()->route('web.admin.products')->with('success', "Product {$product->name} deactivated. It no longer appears in catalogues; its history is kept.");
     }
 
     public function adminDeleteProductImage(Request $request)
@@ -1029,6 +1032,7 @@ class WebController extends Controller
             'category_id' => 'required|exists:categories,id',
             'unit_of_measure' => 'required|string|max:50',
             'selling_price' => 'required|numeric|min:0',
+            'farmer_price' => 'nullable|numeric|min:0',
             'standard_price' => 'required|numeric|min:0',
             'packaging_details' => 'nullable|string|max:255',
             'description' => 'nullable|string',
@@ -1043,6 +1047,7 @@ class WebController extends Controller
         ]);
         $product = Product::findOrFail($request->id);
         $data = $request->only('name', 'sku', 'category_id', 'unit_of_measure', 'selling_price', 'standard_price', 'packaging_details', 'description');
+        $data['farmer_price'] = $request->filled('farmer_price') ? $request->farmer_price : $request->selling_price;
         $data['is_active'] = $request->has('is_active') ? (bool) $request->is_active : $product->is_active;
 
         $taxEnabled = $request->boolean('tax_enabled');
@@ -1140,15 +1145,19 @@ class WebController extends Controller
         return redirect()->route('web.admin.users')->with('success', 'User created successfully!');
     }
 
+    /** Users are never deleted — only deactivated (client requirement). */
     public function adminDeleteUser(Request $request)
     {
         $request->validate(['id' => 'required|exists:users,id']);
         if (auth()->id() == $request->id) {
-            return back()->with('error', 'You cannot delete your own account.');
+            return back()->with('error', 'You cannot deactivate your own account.');
         }
-        User::destroy($request->id);
+        $user = User::findOrFail($request->id);
+        $user->update(['is_active' => false]);
+        $user->tokens()->delete();
+        ActivityLogger::log('user.deactivated', "User {$user->name} deactivated: ".$request->input('action_reason'), $user);
 
-        return redirect()->route('web.admin.users')->with('success', 'User deleted.');
+        return redirect()->route('web.admin.users')->with('success', "User {$user->name} deactivated.");
     }
 
     public function adminUpdateUser(Request $request)
@@ -1189,12 +1198,15 @@ class WebController extends Controller
         return redirect()->route('web.admin.categories')->with('success', 'Category created!');
     }
 
+    /** Categories are deactivated, never deleted (deleting would cascade to products). */
     public function adminDeleteCategory(Request $request)
     {
         $request->validate(['id' => 'required|exists:categories,id']);
-        Category::destroy($request->id);
+        $category = Category::findOrFail($request->id);
+        $category->update(['is_active' => false]);
+        ActivityLogger::log('category.deactivated', "Category {$category->name} deactivated: ".$request->input('action_reason'), $category);
 
-        return redirect()->route('web.admin.categories')->with('success', 'Category deleted.');
+        return redirect()->route('web.admin.categories')->with('success', "Category {$category->name} deactivated.");
     }
 
     public function adminUpdateCategory(Request $request)
@@ -1216,58 +1228,52 @@ class WebController extends Controller
     // ── Admin: Order Actions ──────────────────────────────────
     public function adminApproveOrder(Request $request, $id)
     {
-        $order = Order::findOrFail($id);
-        if ($order->status !== 'pending') {
-            return back()->with('error', 'Only pending orders can be approved.');
-        }
-        $order->update(['status' => 'approved', 'approved_by' => auth()->id(), 'approved_at' => now()]);
+        $request->validate(['expected_delivery_date' => 'required|date|after:today']);
+        $order = Order::with('items.product')->findOrFail($id);
 
-        return back()->with('success', "Order {$order->order_number} approved!");
+        return $this->attempt(
+            fn () => OrderService::approve($order, $request->user(), $request->expected_delivery_date, $request->notes),
+            fn ($o) => "Order {$o->order_number} approved (signature {$o->approval_signature}).",
+        );
     }
 
     public function adminDeclineOrder(Request $request, $id)
     {
         $request->validate(['decline_reason' => 'required|string|max:500']);
         $order = Order::findOrFail($id);
-        if ($order->status !== 'pending') {
-            return back()->with('error', 'Only pending orders can be declined.');
-        }
-        $order->update(['status' => 'declined', 'approved_by' => auth()->id(), 'approved_at' => now(), 'decline_reason' => $request->decline_reason]);
 
-        return back()->with('success', "Order {$order->order_number} declined.");
+        return $this->attempt(
+            fn () => OrderService::decline($order, $request->user(), $request->decline_reason),
+            "Order {$order->order_number} declined.",
+        );
     }
 
     // ── Admin: Payment Actions ──────────────────────────────────
     public function adminAcceptPayment(Request $request, $id)
     {
         $payment = PaymentSubmission::findOrFail($id);
-        if ($payment->status !== 'pending') {
-            return back()->with('error', 'Only pending payments can be accepted.');
-        }
-        $payment->update([
-            'status' => 'accepted',
-            'accepted_by' => auth()->id(),
-            'accepted_at' => now(),
-            'verified_amount' => $payment->amount,
-        ]);
-        $franchise = $payment->franchise;
-        if ($franchise) {
-            $franchise->update(['account_balance' => $franchise->account_balance + $payment->amount]);
-        }
 
-        return back()->with('success', "Payment {$payment->payment_number} accepted!");
+        // Web flow verifies the full submitted amount and accepts in one step;
+        // both steps are recorded and the acceptance is digitally signed.
+        return $this->attempt(function () use ($payment, $request) {
+            if ($payment->status === 'pending') {
+                PaymentService::verify($payment, $request->user(), (float) $payment->amount, $request->input('finance_notes'));
+            }
+            [$accepted] = PaymentService::accept($payment->fresh(), $request->user());
+
+            return $accepted;
+        }, fn ($p) => "Payment {$p->payment_number} accepted (signature {$p->acceptance_signature}). Franchise balance updated.");
     }
 
     public function adminRejectPayment(Request $request, $id)
     {
         $request->validate(['rejection_reason' => 'required|string|max:500']);
         $payment = PaymentSubmission::findOrFail($id);
-        if ($payment->status !== 'pending') {
-            return back()->with('error', 'Only pending payments can be rejected.');
-        }
-        $payment->update(['status' => 'rejected', 'rejection_reason' => $request->rejection_reason]);
 
-        return back()->with('success', "Payment {$payment->payment_number} rejected.");
+        return $this->attempt(
+            fn () => PaymentService::reject($payment, $request->user(), $request->rejection_reason),
+            "Payment {$payment->payment_number} rejected.",
+        );
     }
 
     // ── Admin CRUD: News ──────────────────────────────────
@@ -1449,60 +1455,32 @@ class WebController extends Controller
     }
 
     // ── Staff: Order Actions ──────────────────────────────────
-    public function staffApproveOrder(Request $request, $id)
-    {
-        $order = Order::findOrFail($id);
-        if ($order->status !== 'pending') {
-            return back()->with('error', 'Only pending orders can be approved.');
-        }
-        $order->update(['status' => 'approved', 'approved_by' => auth()->id(), 'approved_at' => now()]);
-
-        return back()->with('success', "Order {$order->order_number} approved!");
-    }
-
-    public function staffDeclineOrder(Request $request, $id)
-    {
-        $request->validate(['decline_reason' => 'required|string|max:500']);
-        $order = Order::findOrFail($id);
-        if ($order->status !== 'pending') {
-            return back()->with('error', 'Only pending orders can be declined.');
-        }
-        $order->update(['status' => 'declined', 'approved_by' => auth()->id(), 'approved_at' => now(), 'decline_reason' => $request->decline_reason]);
-
-        return back()->with('success', "Order {$order->order_number} declined.");
-    }
-
     // ── Finance: Payment Actions ──────────────────────────────────
     public function financeAcceptPayment(Request $request, $id)
     {
         $payment = PaymentSubmission::findOrFail($id);
-        if ($payment->status !== 'pending') {
-            return back()->with('error', 'Only pending payments can be accepted.');
-        }
-        $payment->update([
-            'status' => 'accepted',
-            'accepted_by' => auth()->id(),
-            'accepted_at' => now(),
-            'verified_amount' => $payment->amount,
-        ]);
-        $franchise = $payment->franchise;
-        if ($franchise) {
-            $franchise->update(['account_balance' => $franchise->account_balance + $payment->amount]);
-        }
 
-        return back()->with('success', "Payment {$payment->payment_number} accepted!");
+        // Web flow verifies the full submitted amount and accepts in one step;
+        // both steps are recorded and the acceptance is digitally signed.
+        return $this->attempt(function () use ($payment, $request) {
+            if ($payment->status === 'pending') {
+                PaymentService::verify($payment, $request->user(), (float) $payment->amount, $request->input('finance_notes'));
+            }
+            [$accepted] = PaymentService::accept($payment->fresh(), $request->user());
+
+            return $accepted;
+        }, fn ($p) => "Payment {$p->payment_number} accepted (signature {$p->acceptance_signature}). Franchise balance updated.");
     }
 
     public function financeRejectPayment(Request $request, $id)
     {
         $request->validate(['rejection_reason' => 'required|string|max:500']);
         $payment = PaymentSubmission::findOrFail($id);
-        if ($payment->status !== 'pending') {
-            return back()->with('error', 'Only pending payments can be rejected.');
-        }
-        $payment->update(['status' => 'rejected', 'rejection_reason' => $request->rejection_reason]);
 
-        return back()->with('success', "Payment {$payment->payment_number} rejected.");
+        return $this->attempt(
+            fn () => PaymentService::reject($payment, $request->user(), $request->rejection_reason),
+            "Payment {$payment->payment_number} rejected.",
+        );
     }
 
     // ── Admin: Franchise CRUD ──────────────────────────────────
@@ -1515,10 +1493,15 @@ class WebController extends Controller
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
             'region' => 'nullable|string|max:100',
+            'region_id' => 'nullable|exists:regions,id',
+            'district_id' => 'nullable|exists:districts,id',
             'address' => 'nullable|string|max:500',
             'credit_limit' => 'nullable|numeric|min:0',
         ]);
-        $data = $request->only('name', 'code', 'contact_person', 'phone', 'email', 'region', 'address', 'credit_limit');
+        $data = $request->only('name', 'code', 'contact_person', 'phone', 'email', 'region', 'region_id', 'district_id', 'address', 'credit_limit');
+        if (! empty($data['region_id'])) {
+            $data['region'] = Region::whereKey($data['region_id'])->value('name');
+        }
         $data['is_active'] = true;
         $data['account_balance'] = 0;
         Franchise::create($data);
@@ -1526,16 +1509,15 @@ class WebController extends Controller
         return redirect()->route('web.admin.franchises')->with('success', 'Franchise created successfully!');
     }
 
+    /** Franchises are deactivated, never deleted (their ledger and history are kept). */
     public function adminDeleteFranchise(Request $request)
     {
         $request->validate(['id' => 'required|exists:franchises,id']);
         $franchise = Franchise::findOrFail($request->id);
-        if ($franchise->users()->count() > 0) {
-            return back()->with('error', 'Cannot delete franchise with linked users. Remove users first.');
-        }
-        $franchise->delete();
+        $franchise->update(['is_active' => false]);
+        ActivityLogger::log('franchise.deactivated', "Franchise {$franchise->name} deactivated: ".$request->input('action_reason'), $franchise);
 
-        return redirect()->route('web.admin.franchises')->with('success', 'Franchise deleted.');
+        return redirect()->route('web.admin.franchises')->with('success', "Franchise {$franchise->name} deactivated.");
     }
 
     public function adminUpdateFranchise(Request $request)
@@ -1548,11 +1530,17 @@ class WebController extends Controller
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
             'region' => 'nullable|string|max:100',
+            'region_id' => 'nullable|exists:regions,id',
+            'district_id' => 'nullable|exists:districts,id',
             'address' => 'nullable|string|max:500',
             'credit_limit' => 'nullable|numeric|min:0',
         ]);
         $franchise = Franchise::findOrFail($request->id);
-        $franchise->update($request->only('name', 'code', 'contact_person', 'phone', 'email', 'region', 'address', 'credit_limit'));
+        $data = $request->only('name', 'code', 'contact_person', 'phone', 'email', 'region', 'region_id', 'district_id', 'address', 'credit_limit');
+        if (! empty($data['region_id'])) {
+            $data['region'] = Region::whereKey($data['region_id'])->value('name');
+        }
+        $franchise->update($data);
 
         return redirect()->route('web.admin.franchises')->with('success', 'Franchise updated successfully!');
     }
@@ -1721,44 +1709,15 @@ class WebController extends Controller
         $request->validate([
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
-            'items.*.quantity' => 'required|integer|min:1',
+            'items.*.quantity' => 'required|numeric|min:0.01',
+            'payment_terms' => 'required|in:credit,cash',
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $user = auth()->user();
-
-        $order = DB::transaction(function () use ($request, $user) {
-            $order = Order::create([
-                'order_number' => Order::generateOrderNumber(),
-                'franchise_id' => $user->franchise_id,
-                'ordered_by' => $user->id,
-                'status' => 'pending',
-                'notes' => $request->notes,
-            ]);
-
-            $totalAmount = 0;
-            foreach ($request->items as $item) {
-                $product = Product::findOrFail($item['product_id']);
-                $quantity = $item['quantity'];
-                $unitPrice = $product->getBestPrice($quantity);
-                $subtotal = $quantity * $unitPrice;
-                $order->items()->create([
-                    'product_id' => $product->id,
-                    'quantity' => $quantity,
-                    'unit_price' => $unitPrice,
-                    'original_unit_price' => $product->standard_price,
-                    'subtotal' => $subtotal,
-                ]);
-                $totalAmount += $subtotal;
-            }
-            $order->update(['total_amount' => $totalAmount]);
-
-            return $order;
-        });
-
-        ActivityLogger::orderPlaced($order);
-
-        return redirect()->route('web.franchise.orders')->with('success', "Order {$order->order_number} placed successfully!");
+        return $this->attempt(
+            fn () => OrderService::place($request->user(), array_values($request->items), $request->notes, $request->payment_terms),
+            fn ($o) => "Order {$o->order_number} placed successfully!",
+        );
     }
 
     // ── Franchise: Create Sale ──────────────────────────────────
@@ -1766,6 +1725,7 @@ class WebController extends Controller
     {
         $request->validate([
             'customer_id' => 'nullable|exists:customers,id',
+            'price_tier' => 'nullable|in:retailer,farmer',
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
@@ -1774,86 +1734,36 @@ class WebController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $user = auth()->user();
-
-        $sale = DB::transaction(function () use ($request, $user) {
-            $totalAmount = 0;
-            foreach ($request->items as $item) {
-                $inventory = FranchiseInventory::where('franchise_id', $user->franchise_id)
-                    ->where('product_id', $item['product_id'])->first();
-                if (! $inventory || $inventory->quantity < $item['quantity']) {
-                    return back()->with('error', 'Insufficient stock for one or more products.');
-                }
-                $unitPrice = $inventory->product->getBestPrice($item['quantity']);
-                $totalAmount += $item['quantity'] * $unitPrice;
-            }
-
-            $discount = $request->discount ?? 0;
-            $finalAmount = $totalAmount - $discount;
-
-            $sale = Sale::create([
-                'sale_number' => Sale::generateSaleNumber(),
-                'franchise_id' => $user->franchise_id,
-                'customer_id' => $request->customer_id,
-                'created_by' => $user->id,
-                'total_amount' => $totalAmount,
-                'discount' => $discount,
-                'final_amount' => $finalAmount,
-                'payment_method' => $request->payment_method,
-                'payment_status' => $request->payment_method === 'credit' ? 'pending' : 'paid',
-                'notes' => $request->notes,
-                'sale_date' => now()->toDateString(),
-            ]);
-
-            foreach ($request->items as $item) {
-                $product = Product::find($item['product_id']);
-                $unitPrice = $product->getBestPrice($item['quantity']);
-                $subtotal = $item['quantity'] * $unitPrice;
-                $sale->items()->create([
-                    'product_id' => $item['product_id'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $unitPrice,
-                    'subtotal' => $subtotal,
-                ]);
-
-                $inventory = FranchiseInventory::where('franchise_id', $user->franchise_id)
-                    ->where('product_id', $item['product_id'])->first();
-                $inventory->quantity -= $item['quantity'];
-                $inventory->total_value = $inventory->quantity * $product->standard_price;
-                $inventory->save();
-
-                StockMovement::log('franchise_out', $item['product_id'], -$item['quantity'], $unitPrice, Sale::class, $sale->id, "Sale {$sale->sale_number}", $user->id);
-            }
-
-            return $sale;
-        });
-
-        if (is_array($sale)) {
-            return back()->with('error', 'Sale creation failed.');
-        }
-
-        ActivityLogger::saleCreated($sale);
-
-        return redirect()->route('web.franchise.sales')->with('success', "Sale {$sale->sale_number} recorded!");
+        return $this->attempt(
+            fn () => SaleService::create($request->user(), $request->all() + ['items' => array_values($request->items)]),
+            fn ($sale) => "Sale {$sale->sale_number} recorded!",
+        );
     }
 
     // ── Franchise: Create Customer ──────────────────────────────
     public function franchiseCreateCustomer(Request $request)
     {
+        $user = auth()->user();
+        $regionId = $user->franchise?->region_id;
         $request->validate([
             'name' => 'required|string|max:255',
+            'customer_type' => 'required|in:retailer,farmer',
+            'district_id' => ['nullable', 'exists:districts,id', function ($attr, $value, $fail) use ($regionId) {
+                if ($value && $regionId && District::whereKey($value)->value('region_id') !== $regionId) {
+                    $fail('You can only register customers in districts of your region.');
+                }
+            }],
             'phone' => 'nullable|string|max:20',
             'email' => 'nullable|email|max:255',
             'address' => 'nullable|string|max:500',
-            'is_wholesale' => 'nullable|boolean',
         ]);
 
-        $user = auth()->user();
-        $data = $request->only('name', 'phone', 'email', 'address');
+        $data = $request->only('name', 'customer_type', 'district_id', 'phone', 'email', 'address');
         $data['franchise_id'] = $user->franchise_id;
         $data['customer_code'] = 'C-'.strtoupper(uniqid());
-        $data['is_wholesale'] = $request->boolean('is_wholesale');
+        $data['is_wholesale'] = $request->customer_type === 'retailer';
         $data['is_active'] = true;
+        $data['created_by'] = $user->id;
         Customer::create($data);
 
         return back()->with('success', 'Customer created successfully!');
@@ -1864,29 +1774,20 @@ class WebController extends Controller
     {
         $request->validate([
             'amount' => 'required|numeric|min:1',
-            'payment_method' => 'required|in:cash,mobile_money,bank_transfer',
-            'transaction_reference' => 'nullable|string|max:100',
-            'proof_of_payment' => 'nullable|image|mimes:jpeg,png,jpg,pdf|max:5120',
+            'payment_method' => 'required|in:'.implode(',', array_keys(PaymentService::METHODS)),
+            'transaction_reference' => 'required|string|max:100',
+            'bank_name' => 'nullable|string|max:100',
+            'order_ids' => 'nullable|array',
+            'order_ids.*' => 'exists:orders,id',
+            'proof_of_payment' => 'nullable|file|mimes:jpeg,png,jpg,webp,pdf|max:5120',
         ]);
 
-        $user = auth()->user();
-        $data = [
-            'payment_number' => 'PAY-'.strtoupper(uniqid()),
-            'franchise_id' => $user->franchise_id,
-            'amount' => $request->amount,
-            'payment_method' => $request->payment_method,
-            'transaction_reference' => $request->transaction_reference,
-            'status' => 'pending',
-            'submitted_at' => now(),
-        ];
-
-        if ($request->hasFile('proof_of_payment')) {
-            $data['proof_of_payment_path'] = $request->file('proof_of_payment')->store('payment-proofs', 'public');
-        }
-
-        PaymentSubmission::create($data);
-
-        return redirect()->route('web.franchise.payments')->with('success', 'Payment submitted successfully!');
+        return $this->attempt(
+            fn () => PaymentService::submit($request->user(), $request->all(), $request->file('proof_of_payment'))
+                ? redirect()->route('web.franchise.payments')->with('success', 'Payment submitted. Finance will verify it shortly.')
+                : null,
+            '',
+        );
     }
 
     // ── Franchise: Chat ──────────────────────────────────────────

@@ -6,7 +6,7 @@
             ['label' => 'Franchises', 'value' => ($d['summary']['active_franchises'] ?? 0) . '/' . ($d['summary']['total_franchises'] ?? 0), 'sub' => 'Active / Total', 'gradient' => 'gradient-indigo', 'icon' => 'fa-store'],
             ['label' => 'Sales (Month)', 'value' => 'UGX ' . number_format(($d['summary']['total_sales_this_month'] ?? 0) / 1000) . 'k', 'sub' => '', 'gradient' => 'gradient-green', 'icon' => 'fa-chart-line', 'change' => true],
             ['label' => 'Outstanding', 'value' => 'UGX ' . number_format(($d['summary']['total_outstanding'] ?? 0) / 1000) . 'k', 'sub' => 'Receivables', 'gradient' => 'gradient-rose', 'icon' => 'fa-exclamation-triangle'],
-            ['label' => 'Pending Orders', 'value' => $d['summary']['pending_orders'] ?? 0, 'sub' => 'Awaiting approval', 'gradient' => 'gradient-amber', 'icon' => 'fa-clock'],
+            ['label' => 'Pending Orders', 'value' => $d['summary']['pending_orders'] ?? 0, 'sub' => ($d['summary']['overdue_dispatch_orders'] ?? 0).' past dispatch target', 'gradient' => 'gradient-amber', 'icon' => 'fa-clock'],
             ['label' => 'Pending Payments', 'value' => $d['summary']['pending_payments'] ?? 0, 'sub' => 'To verify', 'gradient' => 'gradient-purple', 'icon' => 'fa-receipt'],
             ['label' => 'Low Stock', 'value' => $d['summary']['low_stock_products'] ?? 0, 'sub' => 'Products alert', 'gradient' => 'gradient-rose', 'icon' => 'fa-box-open'],
         ];

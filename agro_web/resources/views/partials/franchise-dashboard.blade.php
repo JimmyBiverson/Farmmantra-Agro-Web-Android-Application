@@ -32,6 +32,15 @@
     @endforeach
 </div>
 
+@include('partials.fm-ui')
+<div class="fm-grid mb-8">
+    <div class="fm-kpi"><div class="l">Profit this month</div><div class="v" style="color:{{ ($d['summary']['profit_this_month'] ?? 0) < 0 ? '#dc2626' : '#059669' }}">UGX {{ number_format($d['summary']['profit_this_month'] ?? 0) }}</div><div class="fm-muted">Sales minus franchise cost of goods sold</div></div>
+    <div class="fm-kpi"><div class="l">Sales made this month</div><div class="v">{{ number_format($d['summary']['sales_count_this_month'] ?? 0) }}</div></div>
+    <a class="fm-kpi" href="{{ route('web.franchise.orders') }}" style="text-decoration:none"><div class="l">Pending orders</div><div class="v">{{ $d['summary']['pending_orders'] ?? 0 }}</div></a>
+    <a class="fm-kpi" href="{{ route('web.franchise.orders') }}" style="text-decoration:none; {{ ($d['summary']['awaiting_acceptance'] ?? 0) ? 'border-color:#059669' : '' }}"><div class="l">Deliveries to accept</div><div class="v">{{ $d['summary']['awaiting_acceptance'] ?? 0 }}</div></a>
+    <a class="fm-kpi" href="{{ route('web.franchise.statement') }}" style="text-decoration:none"><div class="l">Account statement</div><div class="v" style="font-size:1rem"><i class="fas fa-file-invoice-dollar"></i> Credit / Debit</div></a>
+</div>
+
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
     <div class="card-full">
         <div class="card-header"><h3 class="text-sm font-bold" style="color:var(--text-primary)">Sales by Category</h3></div>

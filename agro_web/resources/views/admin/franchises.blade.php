@@ -39,7 +39,7 @@
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-1.5">
                                     <button type="button" class="btn-action" title="Edit" style="color:var(--accent); background:rgba(99,102,241,0.12)"
-                                        @click="editFranchise = {{ \Illuminate\Support\Js::from(['id' => $f->id, 'name' => $f->name, 'code' => $f->code, 'contact_person' => (string) $f->contact_person, 'phone' => (string) $f->phone, 'email' => (string) $f->email, 'region' => (string) $f->region, 'address' => (string) $f->address, 'credit_limit' => (string) $f->credit_limit]) }}; editing = true">
+                                        @click="editFranchise = {{ \Illuminate\Support\Js::from(['id' => $f->id, 'name' => $f->name, 'code' => $f->code, 'contact_person' => (string) $f->contact_person, 'phone' => (string) $f->phone, 'email' => (string) $f->email, 'region' => (string) $f->region, 'region_id' => $f->region_id ? (string) $f->region_id : '', 'address' => (string) $f->address, 'credit_limit' => (string) $f->credit_limit]) }}; editing = true">
                                         <i class="fas fa-pen"></i>
                                     </button>
                                     <form action="{{ route('web.admin.franchises.toggle') }}" method="POST" class="inline">
@@ -106,8 +106,11 @@
                         <input type="email" name="email" placeholder="e.g. franchise@example.com" class="w-full rounded-lg border px-3 py-2.5 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary)">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Region</label>
-                        <input type="text" name="region" placeholder="e.g. Central" class="w-full rounded-lg border px-3 py-2.5 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary)">
+                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Region (customers visible to this franchise)</label>
+                        <select name="region_id" class="w-full rounded-lg border px-3 py-2.5 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary)">
+                            <option value="">— none —</option>
+                            @foreach(\App\Models\Region::orderBy('name')->get() as $r)<option value="{{ $r->id }}">{{ $r->name }}</option>@endforeach
+                        </select>
                     </div>
                 </div>
                 <div>
@@ -166,8 +169,11 @@
                         <input type="email" name="email" x-model="editFranchise.email">
                     </div>
                     <div>
-                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Region</label>
-                        <input type="text" name="region" x-model="editFranchise.region">
+                        <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Region (customers visible to this franchise)</label>
+                        <select name="region_id" x-model="editFranchise.region_id">
+                            <option value="">— none —</option>
+                            @foreach(\App\Models\Region::orderBy('name')->get() as $r)<option value="{{ $r->id }}">{{ $r->name }}</option>@endforeach
+                        </select>
                     </div>
                 </div>
                 <div>

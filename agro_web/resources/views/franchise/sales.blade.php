@@ -5,7 +5,10 @@
 @php
     $products = \App\Models\Product::where('is_active', true)->orderBy('name')->get();
     $invItems = \App\Models\FranchiseInventory::where('franchise_id', auth()->user()->franchise_id)->with('product')->get();
-    $customers = \App\Models\Customer::where('franchise_id', auth()->user()->franchise_id)->get();
+    $myFranchise = auth()->user()->franchise;
+    $customers = \App\Models\Customer::visibleToFranchise($myFranchise)->where('is_active', true)->with('district:id,name')->orderBy('name')->get();
+    $myDistricts = \App\Models\District::when($myFranchise?->region_id, fn ($q) => $q->where('region_id', $myFranchise->region_id))->orderBy('name')->get(['id', 'name']);
+    $allowDiscount = (bool) \App\Models\Setting::get('allow_sale_discount', '0');
 @endphp
 
 @section('content')
@@ -37,12 +40,22 @@
                     {{-- Customer --}}
                     <div>
                         <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Customer (optional)</label>
-                        <select name="customer_id" class="w-full rounded-lg border px-3 py-2.5 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary); appearance:none; -webkit-appearance:none; background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E&quot;); background-repeat:no-repeat; background-position:right 0.75rem center; padding-right:2rem;">
+                        <select name="customer_id" @change="tier = $event.target.selectedOptions[0]?.dataset.type || tier" class="w-full rounded-lg border px-3 py-2.5 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary); appearance:none; -webkit-appearance:none; background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E&quot;); background-repeat:no-repeat; background-position:right 0.75rem center; padding-right:2rem;">
                             <option value="">Walk-in Customer</option>
                             @foreach($customers as $c)
-                            <option value="{{ $c->id }}">{{ $c->name }} {{ $c->phone ? '('.$c->phone.')' : '' }}</option>
+                            <option value="{{ $c->id }}" data-type="{{ $c->customer_type }}">{{ $c->name }} — {{ \App\Models\Customer::TYPES[$c->customer_type] ?? '' }}{{ $c->district ? ', '.$c->district->name : '' }}</option>
                             @endforeach
                         </select>
+                    </div>
+
+                    {{-- Price list: admin-fixed, franchise only chooses the tier --}}
+                    <div>
+                        <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Selling price</label>
+                        <div style="display:flex; gap:1rem; flex-wrap:wrap; font-size:.85rem; color:var(--text-primary)">
+                            <label><input type="radio" name="price_tier" value="farmer" x-model="tier"> Farmer price</label>
+                            <label><input type="radio" name="price_tier" value="retailer" x-model="tier"> Retail price</label>
+                        </div>
+                        <p class="text-xs mt-1" style="color:var(--text-muted)">Prices are set by Farmmantra and cannot be changed.</p>
                     </div>
 
                     {{-- Sale Items --}}
@@ -62,13 +75,13 @@
                                                 class="w-full rounded-lg border px-3 py-2 text-sm" style="background:var(--bg-card-solid); border-color:var(--border-color); color:var(--text-primary); appearance:none; -webkit-appearance:none; background-image:url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2394a3b8' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10z'/%3E%3C/svg%3E&quot;); background-repeat:no-repeat; background-position:right 0.75rem center; padding-right:2rem;">
                                                 <option value="">Select product...</option>
                                                 @foreach($invItems as $inv)
-                                                <option value="{{ $inv->product_id }}" data-stock="{{ $inv->quantity }}">{{ $inv->product?->name }} — Stock: {{ $inv->quantity }}</option>
+                                                <option value="{{ $inv->product_id }}" data-stock="{{ $inv->quantity }}" data-retail="{{ $inv->product?->retail_price }}" data-farmer="{{ $inv->product?->farmer_unit_price }}">{{ $inv->product?->name }} — Stock: {{ (float) $inv->quantity }} — Retail {{ number_format($inv->product?->retail_price) }} / Farmer {{ number_format($inv->product?->farmer_unit_price) }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
                                         <div class="flex items-center gap-2">
                                             <div class="flex-1">
-                                                <input type="number" :name="'items['+index+'][quantity]'" x-model="item.quantity" min="1" :max="item.max_stock" required placeholder="Qty"
+                                                <input type="number" :name="'items['+index+'][quantity]'" x-model="item.quantity" min="0.01" step="0.01" :max="item.max_stock" required placeholder="Qty"
                                                     class="w-full rounded-lg border px-3 py-2 text-sm" style="background:var(--bg-card-solid); border-color:var(--border-color); color:var(--text-primary)">
                                             </div>
                                             <span class="text-[11px] font-medium whitespace-nowrap" style="color:var(--text-muted)">
@@ -95,11 +108,13 @@
                                 <option value="credit">Credit</option>
                             </select>
                         </div>
+                        @if($allowDiscount)
                         <div>
                             <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Discount (UGX)</label>
                             <input type="number" name="discount" value="0" min="0" placeholder="0"
                                 class="w-full rounded-lg border px-3 py-2.5 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary)">
                         </div>
+                        @endif
                     </div>
 
                     {{-- Notes --}}
@@ -151,10 +166,21 @@
                         <input type="text" name="address" placeholder="Location / address"
                             class="w-full rounded-lg border px-3 py-2.5 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary)">
                     </div>
-                    <div class="flex items-center gap-3">
-                        <input type="checkbox" name="is_wholesale" value="1" id="is_wholesale"
-                            class="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500">
-                        <label for="is_wholesale" class="text-sm font-medium" style="color:var(--text-secondary)">Wholesale Customer</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">Customer type *</label>
+                            <select name="customer_type" required class="w-full rounded-lg border px-3 py-2.5 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary)">
+                                <option value="farmer">Farmer</option>
+                                <option value="retailer">Retailer</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-medium mb-1.5" style="color:var(--text-secondary)">District</label>
+                            <select name="district_id" class="w-full rounded-lg border px-3 py-2.5 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary)">
+                                <option value="">Select district…</option>
+                                @foreach($myDistricts as $d)<option value="{{ $d->id }}">{{ $d->name }}</option>@endforeach
+                            </select>
+                        </div>
                     </div>
                     <button type="submit" class="w-full py-3 rounded-xl text-sm font-semibold text-white transition-all" style="background:linear-gradient(135deg,#10b981,#059669); box-shadow:0 4px 15px rgba(16,185,129,0.35);">
                         <i class="fas fa-user-plus mr-2"></i>Add Customer
@@ -181,6 +207,7 @@
                         <th class="px-4 py-3 text-right">Amount</th>
                         <th class="px-4 py-3 text-center">Payment</th>
                         <th class="px-4 py-3 text-left">Date</th>
+                        <th class="px-4 py-3"></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -194,9 +221,10 @@
                             <span class="badge {{ $s->payment_status === 'paid' ? 'badge-success' : 'badge-warning' }}">{{ ucfirst($s->payment_status) }}</span>
                         </td>
                         <td class="px-4 py-3 text-xs" style="color:var(--text-muted)">{{ $s->sale_date->format('M d, Y') }}</td>
+                        <td class="px-4 py-3 text-right"><a href="{{ route('web.print', ['type' => 'sale', 'id' => $s->id]) }}" target="_blank" title="Print receipt" style="color:var(--accent)"><i class="fas fa-print"></i></a></td>
                     </tr>
                     @empty
-                    <tr><td colspan="6" class="px-4 py-6 text-center text-sm" style="color:var(--text-muted)">No sales recorded yet</td></tr>
+                    <tr><td colspan="7" class="px-4 py-6 text-center text-sm" style="color:var(--text-muted)">No sales recorded yet</td></tr>
                     @endforelse
                 </tbody>
             </table>
@@ -209,6 +237,7 @@
 <script>
 function saleForm() {
     return {
+        tier: 'farmer',
         items: [{ product_id: '', quantity: 1, max_stock: 0 }],
         addItem() {
             this.items.push({ product_id: '', quantity: 1, max_stock: 0 });
@@ -220,7 +249,7 @@ function saleForm() {
             var sel = document.querySelectorAll('select[name="items['+index+'][product_id]"]')[0];
             if (!sel) return;
             var opt = sel.options[sel.selectedIndex];
-            this.items[index].max_stock = parseInt(opt.dataset.stock) || 0;
+            this.items[index].max_stock = parseFloat(opt.dataset.stock) || 0;
             if (this.items[index].quantity > this.items[index].max_stock) {
                 this.items[index].quantity = this.items[index].max_stock || 1;
             }

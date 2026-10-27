@@ -4,7 +4,7 @@
     @php
         $stats = [
             ['label' => 'Pending Orders', 'value' => $d['summary']['pending_orders'] ?? 0, 'gradient' => 'gradient-amber', 'icon' => 'fa-clock'],
-            ['label' => 'Approved Today', 'value' => $d['summary']['approved_orders_today'] ?? 0, 'gradient' => 'gradient-green', 'icon' => 'fa-check'],
+            ['label' => 'Overdue Dispatch', 'value' => $d['summary']['overdue_dispatch_orders'] ?? 0, 'gradient' => 'gradient-rose', 'icon' => 'fa-hourglass-end', 'sub' => 'Past '.\App\Models\Order::dispatchTargetDays().'-day target'],
             ['label' => 'Low Stock Items', 'value' => $d['summary']['low_stock_products'] ?? 0, 'gradient' => 'gradient-rose', 'icon' => 'fa-exclamation-triangle'],
             ['label' => 'Warehouse Value', 'value' => 'UGX ' . number_format($d['summary']['total_warehouse_value'] ?? 0), 'gradient' => 'gradient-indigo', 'icon' => 'fa-warehouse', 'sub' => ($d['summary']['active_franchises'] ?? 0) . ' active franchises'],
         ];
