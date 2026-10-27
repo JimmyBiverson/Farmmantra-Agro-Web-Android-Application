@@ -30,6 +30,8 @@ class User extends Authenticatable
         'date_of_birth',
         'fcm_token',
         'notification_preferences',
+        'terms_accepted_at',
+        'terms_version',
     ];
 
     protected $hidden = [
@@ -45,6 +47,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
+            'terms_accepted_at' => 'datetime',
             'date_of_birth' => 'date',
             'notification_preferences' => 'array',
         ];
@@ -75,6 +78,32 @@ class User extends Authenticatable
         return $this->role?->name === 'Farmmantra Staff';
     }
 
+    public function isWarehouse(): bool
+    {
+        return $this->role?->name === 'Warehouse';
+    }
+
+    /** Users who may accept, decline, adjust and dispatch orders. */
+    public function canManageOrders(): bool
+    {
+        return $this->isWarehouse() || $this->isAdmin();
+    }
+
+    /**
+     * Franchise partners must accept the current terms & conditions on first
+     * login and again whenever the administrator publishes a new version.
+     */
+    public function needsToAcceptTerms(): bool
+    {
+        if (! $this->isFranchisePartner()) {
+            return false;
+        }
+
+        $current = (int) Setting::get('terms_version', 1);
+
+        return $this->terms_accepted_at === null || (int) $this->terms_version < $current;
+    }
+
     public function isFinance(): bool
     {
         return $this->role?->name === 'Finance Department';
@@ -90,7 +119,7 @@ class User extends Authenticatable
     public function scopeStaffAndAdmin($query)
     {
         return $query->whereHas('role', function ($q) {
-            $q->whereIn('name', ['System Administrator', 'Farmmantra Staff', 'Finance Department']);
+            $q->whereIn('name', ['System Administrator', 'Farmmantra Staff', 'Finance Department', 'Warehouse']);
         });
     }
 
@@ -99,6 +128,18 @@ class User extends Authenticatable
         return $query->whereHas('role', function ($q) {
             $q->where('name', 'Farmmantra Staff');
         });
+    }
+
+    public function scopeWarehouseOnly($query)
+    {
+        return $query->whereHas('role', fn ($q) => $q->where('name', 'Warehouse'));
+    }
+
+    /** Warehouse handles orders; sales staff monitor them. Both are notified. */
+    public function scopeOrderWatchers($query)
+    {
+        return $query->where('is_active', true)
+            ->whereHas('role', fn ($q) => $q->whereIn('name', ['Warehouse', 'Farmmantra Staff']));
     }
 
     public function getAvatarUrlAttribute(): ?string

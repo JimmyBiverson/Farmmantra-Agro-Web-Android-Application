@@ -10,8 +10,8 @@ class Sale extends Model
     use HasFactory;
 
     protected $fillable = [
-        'sale_number', 'franchise_id', 'customer_id', 'created_by',
-        'total_amount', 'discount', 'final_amount',
+        'sale_number', 'franchise_id', 'customer_id', 'price_tier', 'created_by',
+        'total_amount', 'discount', 'final_amount', 'total_cost',
         'payment_method', 'payment_status', 'notes', 'sale_date',
     ];
 
@@ -19,6 +19,7 @@ class Sale extends Model
         'total_amount' => 'decimal:2',
         'discount' => 'decimal:2',
         'final_amount' => 'decimal:2',
+        'total_cost' => 'decimal:2',
         'sale_date' => 'date',
     ];
 

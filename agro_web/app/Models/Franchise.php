@@ -12,7 +12,7 @@ class Franchise extends Model
 
     protected $fillable = [
         'name', 'code', 'contact_person', 'phone', 'email',
-        'region', 'address', 'credit_limit', 'account_balance',
+        'region', 'region_id', 'district_id', 'address', 'credit_limit', 'account_balance',
         'monthly_target', 'profile_photo', 'is_active',
     ];
 
@@ -22,6 +22,26 @@ class Franchise extends Model
         'monthly_target' => 'decimal:2',
         'is_active' => 'boolean',
     ];
+
+    public function regionModel()
+    {
+        return $this->belongsTo(Region::class, 'region_id');
+    }
+
+    public function district()
+    {
+        return $this->belongsTo(District::class);
+    }
+
+    public function accountTransactions()
+    {
+        return $this->hasMany(AccountTransaction::class);
+    }
+
+    public function creditNotes()
+    {
+        return $this->hasMany(CreditNote::class);
+    }
 
     public function users()
     {

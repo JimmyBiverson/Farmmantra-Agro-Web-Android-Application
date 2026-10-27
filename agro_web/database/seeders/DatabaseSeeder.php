@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         $staffRole = Role::firstOrCreate(['name' => 'Farmmantra Staff', 'guard_name' => 'web']);
         $financeRole = Role::firstOrCreate(['name' => 'Finance Department', 'guard_name' => 'web']);
         $franchiseRole = Role::firstOrCreate(['name' => 'Franchise Partner', 'guard_name' => 'web']);
+        $warehouseRole = Role::firstOrCreate(['name' => 'Warehouse', 'guard_name' => 'web']);
 
         // ── Admin User ────────────────────────────────────────
         User::firstOrCreate(
@@ -53,6 +54,18 @@ class DatabaseSeeder extends Seeder
                 'password' => Hash::make('password123'),
                 'role_id' => $financeRole->id,
                 'phone' => '+256700000003',
+                'is_active' => true,
+            ]
+        );
+
+        // ── Warehouse User (accepts & dispatches orders) ──────
+        User::firstOrCreate(
+            ['email' => 'warehouse@farmmantra.co.ug'],
+            [
+                'name' => 'Warehouse Officer',
+                'password' => Hash::make('password123'),
+                'role_id' => $warehouseRole->id,
+                'phone' => '+256700000004',
                 'is_active' => true,
             ]
         );

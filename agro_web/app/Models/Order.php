@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 
 class Order extends Model
 {
@@ -16,12 +17,18 @@ class Order extends Model
         'expected_delivery_date', 'approved_by', 'approved_at',
         'declined_by', 'declined_at', 'decline_reason',
         'finance_verified_by', 'finance_verified_at',
-        'total_amount', 'tax_amount',
+        'total_amount', 'tax_amount', 'payment_terms', 'amount_paid',
+        'dispatched_by', 'dispatched_at', 'dispatch_means', 'dispatch_vehicle', 'dispatch_remarks',
+        'approval_signature', 'dispatch_signature', 'delivery_signature', 'delivery_confirmed_by',
     ];
+
+    public const DISPATCH_MEANS = ['truck' => 'Truck', 'bus' => 'Bus', 'pickup' => 'Pick-up', 'motorcycle' => 'Motorcycle', 'collected' => 'Collected by franchise', 'other' => 'Other'];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
         'tax_amount' => 'decimal:2',
+        'amount_paid' => 'decimal:2',
+        'dispatched_at' => 'datetime',
         'expected_delivery_date' => 'datetime',
         'approved_at' => 'datetime',
         'declined_at' => 'datetime',
@@ -49,6 +56,55 @@ class Order extends Model
     public function declinedByUser()
     {
         return $this->belongsTo(User::class, 'declined_by');
+    }
+
+    public function dispatchedByUser()
+    {
+        return $this->belongsTo(User::class, 'dispatched_by');
+    }
+
+    public function deliveryConfirmedByUser()
+    {
+        return $this->belongsTo(User::class, 'delivery_confirmed_by');
+    }
+
+    public function signatures()
+    {
+        return $this->morphMany(DigitalSignature::class, 'signable')->orderBy('signed_at');
+    }
+
+    public static function dispatchTargetDays(): int
+    {
+        return max(1, (int) Setting::get('dispatch_target_days', 15));
+    }
+
+    /** Date by which the order should be dispatched (client target: 15 days). */
+    public function getDispatchDueAtAttribute(): ?Carbon
+    {
+        return $this->created_at?->copy()->addDays(self::dispatchTargetDays());
+    }
+
+    public function getIsDispatchOverdueAttribute(): bool
+    {
+        if (in_array($this->status, ['declined'], true) || $this->dispatched_at || in_array($this->delivery_status, ['out_for_delivery', 'delivered', 'confirmed'], true)) {
+            return false;
+        }
+
+        return $this->dispatch_due_at !== null && now()->greaterThan($this->dispatch_due_at);
+    }
+
+    /** Orders not yet dispatched and older than the dispatch target. */
+    public function scopeDispatchOverdue($query)
+    {
+        return $query->whereIn('status', ['pending', 'approved'])
+            ->whereNull('dispatched_at')
+            ->whereNotIn('delivery_status', ['out_for_delivery', 'delivered', 'confirmed'])
+            ->where('created_at', '<', now()->subDays(self::dispatchTargetDays()));
+    }
+
+    public function getBalanceDueAttribute(): float
+    {
+        return max(0, round((float) $this->total_amount - (float) $this->amount_paid, 2));
     }
 
     public function financeVerifiedByUser()

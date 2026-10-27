@@ -11,12 +11,13 @@ class SaleItem extends Model
 
     protected $fillable = [
         'sale_id', 'product_id', 'quantity',
-        'unit_price', 'subtotal', 'notes',
+        'unit_price', 'cost_price', 'subtotal', 'notes',
     ];
 
     protected $casts = [
         'quantity' => 'decimal:2',
         'unit_price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
         'subtotal' => 'decimal:2',
     ];
 

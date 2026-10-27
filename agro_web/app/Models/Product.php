@@ -11,13 +11,14 @@ class Product extends Model
 
     protected $fillable = [
         'name', 'sku', 'category_id', 'unit_of_measure',
-        'packaging_details', 'description', 'selling_price',
+        'packaging_details', 'description', 'selling_price', 'farmer_price',
         'standard_price', 'image', 'is_active',
         'tax_enabled', 'tax_type', 'tax_rate', 'tax_amount', 'base_price', 'final_price',
     ];
 
     protected $casts = [
         'selling_price' => 'decimal:2',
+        'farmer_price' => 'decimal:2',
         'standard_price' => 'decimal:2',
         'tax_enabled' => 'boolean',
         'tax_rate' => 'decimal:2',
@@ -27,7 +28,7 @@ class Product extends Model
         'is_active' => 'boolean',
     ];
 
-    protected $appends = ['image_url', 'all_images', 'effective_price'];
+    protected $appends = ['image_url', 'all_images', 'effective_price', 'franchise_price', 'retail_price', 'farmer_unit_price'];
 
     public function category()
     {
@@ -67,6 +68,33 @@ class Product extends Model
             ->first();
 
         return $slab ? (float) $slab->slab_price : (float) $this->standard_price;
+    }
+
+    /** Franchise (base) price — what a franchise pays Farmmantra. */
+    public function getFranchisePriceAttribute(): float
+    {
+        return (float) $this->standard_price;
+    }
+
+    /** Retail selling price (franchise → retailer customers). */
+    public function getRetailPriceAttribute(): float
+    {
+        return (float) ($this->selling_price ?: $this->standard_price);
+    }
+
+    /** Farmer selling price (franchise → farmer customers). */
+    public function getFarmerUnitPriceAttribute(): float
+    {
+        return (float) ($this->farmer_price ?: $this->getRetailPriceAttribute());
+    }
+
+    /**
+     * Admin-fixed selling price for a customer type. Franchises cannot type a
+     * price: they can only choose one of the listed tiers.
+     */
+    public function priceForTier(string $tier): float
+    {
+        return $tier === 'retailer' ? $this->retail_price : $this->farmer_unit_price;
     }
 
     public function getImageUrlAttribute(): ?string

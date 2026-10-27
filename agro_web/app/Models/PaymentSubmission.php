@@ -15,7 +15,7 @@ class PaymentSubmission extends Model
         'proof_of_payment_path', 'status', 'submitted_at',
         'verified_by', 'verified_at', 'accepted_by', 'accepted_at',
         'rejected_by', 'rejected_at', 'rejection_reason', 'finance_notes', 'verified_amount',
-        'info_requested_by', 'info_requested_at', 'info_request_note',
+        'info_requested_by', 'info_requested_at', 'info_request_note', 'acceptance_signature',
     ];
 
     protected $casts = [

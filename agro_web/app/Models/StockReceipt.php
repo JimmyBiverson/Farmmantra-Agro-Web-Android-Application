@@ -12,10 +12,10 @@ class StockReceipt extends Model
     protected $fillable = [
         'receipt_number', 'order_id', 'franchise_id',
         'received_by', 'received_at', 'status',
-        'notes', 'discrepancy_notes',
+        'notes', 'discrepancy_notes', 'terms_accepted_at', 'signature_number',
     ];
 
-    protected $casts = ['received_at' => 'datetime'];
+    protected $casts = ['received_at' => 'datetime', 'terms_accepted_at' => 'datetime'];
 
     public function order()
     {
