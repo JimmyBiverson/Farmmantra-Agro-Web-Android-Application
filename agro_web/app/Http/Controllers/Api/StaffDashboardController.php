@@ -35,6 +35,9 @@ class StaffDashboardController extends Controller
         $data = [
             'summary' => [
                 'pending_orders' => Order::where('status', 'pending')->count(),
+                'overdue_dispatch_orders' => Order::dispatchOverdue()->count(),
+                'dispatch_target_days' => Order::dispatchTargetDays(),
+                'can_manage_orders' => $request->user()->canManageOrders(),
                 'pending_orders_today' => Order::where('status', 'pending')
                     ->whereDate('created_at', $today)
                     ->count(),

@@ -2,17 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Events\OrderStatusChanged;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
-use App\Models\Product;
-use App\Models\User;
-use App\Services\ActivityLogger;
-use App\Services\NotificationService;
+use App\Services\OrderService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class FranchiseOrderController extends Controller
 {
@@ -42,89 +36,15 @@ class FranchiseOrderController extends Controller
             'items' => 'required|array|min:1',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|numeric|min:0.01',
+            'payment_terms' => 'nullable|string|in:credit,cash',
             'notes' => 'nullable|string',
         ]);
 
-        $user = $request->user();
-
-        $result = DB::transaction(function () use ($request, $user) {
-            $order = Order::create([
-                'order_number' => Order::generateOrderNumber(),
-                'franchise_id' => $user->franchise_id,
-                'ordered_by' => $user->id,
-                'status' => 'pending',
-                'delivery_status' => 'pending',
-                'notes' => $request->notes,
-            ]);
-
-            $totalAmount = 0;
-            $totalTax = 0;
-
-            foreach ($request->items as $item) {
-                $product = Product::findOrFail($item['product_id']);
-                $quantity = (float) $item['quantity'];
-                $baseUnitPrice = $product->getBestPrice($quantity);
-                $tax = $product->calculateTaxPrice($baseUnitPrice);
-
-                $finalUnitPrice = (float) $tax['final_price'];
-                $unitTax = round($finalUnitPrice - $baseUnitPrice, 2);
-                $subtotal = round($quantity * $finalUnitPrice, 2);
-
-                $order->items()->create([
-                    'product_id' => $product->id,
-                    'quantity' => $quantity,
-                    'unit_price' => $finalUnitPrice,
-                    'base_unit_price' => $baseUnitPrice,
-                    'tax_rate' => $product->tax_enabled ? (float) $product->tax_rate : 0.00,
-                    'tax_amount' => round($quantity * $unitTax, 2),
-                    'original_unit_price' => $product->standard_price,
-                    'subtotal' => $subtotal,
-                ]);
-
-                $totalAmount += $subtotal;
-                $totalTax += round($quantity * $unitTax, 2);
-            }
-
-            if ($user->franchise && (float) $user->franchise->credit_limit > 0) {
-                $creditLimit = (float) $user->franchise->credit_limit;
-                $outstanding = (float) $user->franchise->account_balance;
-
-                if (($outstanding + $totalAmount) > $creditLimit) {
-                    throw ValidationException::withMessages([
-                        'order' => 'This order exceeds the franchise credit limit (limit: '.number_format($creditLimit, 0).', projected outstanding: '.number_format($outstanding + $totalAmount, 0).').',
-                    ]);
-                }
-            }
-
-            $order->update([
-                'total_amount' => round($totalAmount, 2),
-                'tax_amount' => round($totalTax, 2),
-            ]);
-
-            return $order;
-        });
-
-        $result->load('items.product.category');
-
-        ActivityLogger::orderPlaced($result);
-
-        // Notify every Farmmantra Staff member about the new order.
-        $staffIds = User::staffOnly()->pluck('id')->all();
-        NotificationService::send(
-            $staffIds,
-            'New Order '.$result->order_number,
-            "{$user->franchise?->name} placed a new order for ".$result->items->count().' product(s) worth '.number_format((float) $result->total_amount, 0),
-            'order',
-            Order::class,
-            $result->id,
-            'staff/orders/detail',
-        );
-
-        event(new OrderStatusChanged($result, 'pending', 'pending'));
+        $order = OrderService::place($request->user(), $request->items, $request->notes, $request->input('payment_terms', 'credit'));
 
         return response()->json([
             'message' => 'Order placed successfully.',
-            'data' => $result,
+            'data' => $order,
         ], 201);
     }
 
@@ -140,6 +60,9 @@ class FranchiseOrderController extends Controller
         $order->load([
             'items.product.category',
             'stockReceipt.items.product',
+            'approvedByUser:id,name',
+            'dispatchedByUser:id,name',
+            'signatures',
             'payments' => fn ($q) => $q->where('status', 'accepted')->latest('accepted_at'),
         ]);
 
@@ -147,7 +70,9 @@ class FranchiseOrderController extends Controller
     }
 
     /**
-     * Franchise partner confirms physical receipt of a delivered order.
+     * Franchise partner accepts a delivered order. Without an explicit item
+     * list every dispatched quantity is accepted as received. Requires the
+     * terms & conditions to be accepted (accept_terms = true).
      */
     public function confirmDelivery(Request $request, Order $order): JsonResponse
     {
@@ -157,37 +82,30 @@ class FranchiseOrderController extends Controller
             return response()->json(['message' => 'Unauthorized.'], 403);
         }
 
-        if ($order->delivery_status !== 'delivered') {
-            return response()->json([
-                'message' => 'Order can only be confirmed after it has been delivered.',
-            ], 422);
-        }
-
-        $order->update([
-            'delivery_status' => 'confirmed',
-            'status' => 'delivered',
-            'received_at' => $order->received_at ?? now(),
-            'completed_at' => now(),
+        $request->validate([
+            'accept_terms' => 'accepted',
+            'items' => 'nullable|array',
+            'items.*.stock_receipt_item_id' => 'required_with:items',
+            'items.*.received_quantity' => 'required_with:items|numeric|min:0',
+            'items.*.discrepancy_notes' => 'nullable|string',
+            'notes' => 'nullable|string',
         ]);
 
-        ActivityLogger::orderDelivered($order, $user->id);
+        $receipt = $order->stockReceipt;
+        if (! $receipt) {
+            return response()->json(['message' => 'This order has no delivery to accept yet.'], 422);
+        }
 
-        $staffIds = User::staffOnly()->pluck('id')->all();
-        NotificationService::send(
-            $staffIds,
-            'Delivery Confirmed — '.$order->order_number,
-            "{$user->franchise?->name} confirmed receipt of order {$order->order_number}.",
-            'delivery',
-            Order::class,
-            $order->id,
-            'staff/orders/detail',
-        );
+        $items = $request->input('items') ?? $receipt->items->map(fn ($i) => [
+            'stock_receipt_item_id' => $i->id,
+            'received_quantity' => $i->ordered_quantity,
+        ])->all();
 
-        event(new OrderStatusChanged($order, 'delivered', 'confirmed'));
+        OrderService::receive($receipt, $user, $items, $request->notes, $request->boolean('accept_terms'));
 
         return response()->json([
-            'message' => 'Delivery confirmed. Thank you!',
-            'data' => $order->fresh(['franchise', 'items.product.category']),
+            'message' => 'Delivery accepted. Your stock and account have been updated.',
+            'data' => $order->fresh(['franchise', 'items.product.category', 'stockReceipt.items.product']),
         ]);
     }
 }

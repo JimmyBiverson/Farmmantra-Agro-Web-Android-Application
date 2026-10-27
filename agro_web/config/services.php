@@ -28,6 +28,15 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Bulk SMS (see App\Services\SmsService). SMS_DRIVER: log | africastalking
+    'sms' => [
+        'driver' => env('SMS_DRIVER', 'log'),
+        'sender_id' => env('SMS_SENDER_ID'),
+        'at_username' => env('SMS_AT_USERNAME'),
+        'at_api_key' => env('SMS_AT_API_KEY'),
+        'at_endpoint' => env('SMS_AT_ENDPOINT', 'https://api.africastalking.com/version1/messaging'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

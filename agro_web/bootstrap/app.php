@@ -1,7 +1,9 @@
 <?php
 
 use App\Http\Middleware\ApiCheckRole;
+use App\Http\Middleware\ConfirmSensitiveAction;
 use App\Http\Middleware\EnsureFranchiseActive;
+use App\Http\Middleware\EnsureTermsAccepted;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -20,6 +22,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'api.role' => ApiCheckRole::class,
             'franchise.active' => EnsureFranchiseActive::class,
+            'confirm.sensitive' => ConfirmSensitiveAction::class,
+            'terms.accepted' => EnsureTermsAccepted::class,
         ]);
 
         $middleware->prepend([

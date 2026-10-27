@@ -28,6 +28,8 @@ class WorkflowFixesTest extends TestCase
 
     protected User $staffUser;
 
+    protected User $warehouseUser;
+
     protected User $financeUser;
 
     protected User $franchiseUser;
@@ -52,6 +54,7 @@ class WorkflowFixesTest extends TestCase
         $this->staffRole = Role::create(['name' => 'Farmmantra Staff', 'guard_name' => 'web']);
         $this->financeRole = Role::create(['name' => 'Finance Department', 'guard_name' => 'web']);
         $this->franchiseRole = Role::create(['name' => 'Franchise Partner', 'guard_name' => 'web']);
+        $warehouseRole = Role::create(['name' => 'Warehouse', 'guard_name' => 'web']);
 
         $this->franchise = Franchise::create([
             'name' => 'Kampala Franchise Test',
@@ -69,6 +72,10 @@ class WorkflowFixesTest extends TestCase
             'name' => 'Staff User', 'email' => 'staff@test.com',
             'password' => bcrypt('password'), 'role_id' => $this->staffRole->id, 'is_active' => true,
         ]);
+        $this->warehouseUser = User::create([
+            'name' => 'Warehouse User', 'email' => 'warehouse@test.com',
+            'password' => bcrypt('password'), 'role_id' => $warehouseRole->id, 'is_active' => true,
+        ]);
         $this->financeUser = User::create([
             'name' => 'Finance User', 'email' => 'finance@test.com',
             'password' => bcrypt('password'), 'role_id' => $this->financeRole->id, 'is_active' => true,
@@ -77,6 +84,7 @@ class WorkflowFixesTest extends TestCase
             'name' => 'Franchise Partner', 'email' => 'franchise@test.com',
             'password' => bcrypt('password'), 'role_id' => $this->franchiseRole->id,
             'franchise_id' => $this->franchise->id, 'is_active' => true,
+            'terms_accepted_at' => now(), 'terms_version' => 1,
         ]);
 
         $category = Category::create(['name' => 'Herbicides', 'slug' => 'herbicides']);
@@ -107,7 +115,7 @@ class WorkflowFixesTest extends TestCase
     {
         $order = $this->placeOrder();
 
-        Sanctum::actingAs($this->staffUser);
+        Sanctum::actingAs($this->warehouseUser);
         $response = $this->postJson("/api/staff/orders/{$order->id}/decline", [
             'decline_reason' => 'Stock unavailable',
         ]);
@@ -116,7 +124,7 @@ class WorkflowFixesTest extends TestCase
 
         $order->refresh();
         $this->assertEquals('declined', $order->status);
-        $this->assertEquals($this->staffUser->id, $order->declined_by);
+        $this->assertEquals($this->warehouseUser->id, $order->declined_by);
         $this->assertNotNull($order->declined_at);
         $this->assertNull($order->approved_by);
         $this->assertEquals('Stock unavailable', $order->decline_reason);
@@ -127,7 +135,7 @@ class WorkflowFixesTest extends TestCase
     {
         $order = $this->placeOrder();
 
-        Sanctum::actingAs($this->staffUser);
+        Sanctum::actingAs($this->warehouseUser);
         $response = $this->postJson("/api/staff/orders/{$order->id}/approve", [
             'expected_delivery_date' => now()->addDays(5)->toDateString(),
         ]);
@@ -136,7 +144,7 @@ class WorkflowFixesTest extends TestCase
 
         $order->refresh();
         $this->assertEquals('approved', $order->status);
-        $this->assertEquals($this->staffUser->id, $order->approved_by);
+        $this->assertEquals($this->warehouseUser->id, $order->approved_by);
         $this->assertNotNull($order->approved_at);
         $this->assertEquals('approved', $order->items()->first()->status);
 
@@ -149,7 +157,7 @@ class WorkflowFixesTest extends TestCase
         $order = $this->placeOrder(10);
         $item = $order->items()->first();
 
-        Sanctum::actingAs($this->staffUser);
+        Sanctum::actingAs($this->warehouseUser);
         $response = $this->postJson("/api/staff/orders/{$order->id}/adjust", [
             'items' => [
                 [
@@ -383,6 +391,12 @@ class WorkflowFixesTest extends TestCase
         $this->get('/staff/inventory')->assertStatus(200);
         $this->get('/staff/franchise-stock')->assertStatus(200);
         $this->get('/staff/stock-receipts')->assertStatus(200);
+
+        // Warehouse: same operations pages, with actions
+        $this->actingAs($this->warehouseUser);
+        $this->get('/dashboard')->assertStatus(200);
+        $this->get('/staff/orders')->assertStatus(200)->assertSee('Warehouse — Orders', false);
+        $this->get('/reports/stock')->assertStatus(200);
 
         // Finance
         $this->actingAs($this->financeUser);

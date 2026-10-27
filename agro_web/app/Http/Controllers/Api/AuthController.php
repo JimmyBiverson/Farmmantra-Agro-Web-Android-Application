@@ -156,6 +156,10 @@ class AuthController extends Controller
             'franchise_code' => $user->franchise?->code,
             'is_active' => $user->is_active,
             'notification_preferences' => $user->notification_preferences ?? [],
+            'franchise_region' => $user->franchise?->regionModel?->name ?? $user->franchise?->region,
+            'needs_terms_acceptance' => $user->needsToAcceptTerms(),
+            'terms_accepted_at' => $user->terms_accepted_at?->toIso8601String(),
+            'can_manage_orders' => $user->canManageOrders(),
         ];
     }
 }

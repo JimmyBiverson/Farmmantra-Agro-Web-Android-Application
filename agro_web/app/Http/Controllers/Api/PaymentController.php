@@ -3,11 +3,10 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Order;
 use App\Models\PaymentSubmission;
 use App\Models\User;
-use App\Services\ActivityLogger;
 use App\Services\NotificationService;
+use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -35,75 +34,16 @@ class PaymentController extends Controller
             'order_id' => 'nullable|exists:orders,id',
             'order_ids' => 'nullable|array',
             'order_ids.*' => 'exists:orders,id',
-            'payment_method' => 'required|string|in:bank_transfer,mobile_money,cash,cheque',
-            'transaction_reference' => 'nullable|string|max:100',
+            'payment_method' => 'required|string|in:'.implode(',', array_keys(PaymentService::METHODS)),
+            'transaction_reference' => 'required|string|max:100',
             'bank_name' => 'nullable|string|max:100',
-            'proof_of_payment' => 'nullable|file|image|max:5120',
+            'proof_of_payment' => 'nullable|file|mimes:jpeg,jpg,png,webp,pdf|max:5120',
             'notes' => 'nullable|string',
         ]);
 
-        $user = $request->user();
+        $payment = PaymentService::submit($request->user(), $request->all(), $request->file('proof_of_payment'));
 
-        $orderIds = $request->filled('order_ids')
-            ? (array) $request->order_ids
-            : ($request->filled('order_id') ? [$request->order_id] : []);
-
-        // Validate that all linked orders belong to this franchise and are approved.
-        if (! empty($orderIds)) {
-            $orders = Order::whereIn('id', $orderIds)
-                ->where('franchise_id', $user->franchise_id)
-                ->where('status', 'approved')
-                ->pluck('id')
-                ->all();
-
-            if (count($orders) !== count(array_unique($orderIds))) {
-                return response()->json([
-                    'message' => 'One or more orders are invalid, not approved, or do not belong to your franchise.',
-                ], 422);
-            }
-        }
-
-        $proofPath = null;
-        if ($request->hasFile('proof_of_payment')) {
-            $proofPath = $request->file('proof_of_payment')->store('payment-proofs', 'public');
-        }
-
-        $payment = PaymentSubmission::create([
-            'payment_number' => PaymentSubmission::generatePaymentNumber(),
-            'franchise_id' => $user->franchise_id,
-            'order_id' => $orderIds[0] ?? null,
-            'amount' => $request->amount,
-            'payment_method' => $request->payment_method,
-            'transaction_reference' => $request->transaction_reference,
-            'bank_name' => $request->bank_name,
-            'proof_of_payment_path' => $proofPath,
-            'status' => 'pending',
-            'submitted_at' => now(),
-        ]);
-
-        if (! empty($orderIds)) {
-            foreach ($orderIds as $orderId) {
-                $payment->orders()->attach($orderId, ['allocated_amount' => 0]);
-            }
-        }
-
-        ActivityLogger::paymentSubmitted($payment);
-
-        $financeIds = User::whereHas('role', fn ($q) => $q->where('name', 'Finance Department'))
-            ->pluck('id')
-            ->all();
-
-        NotificationService::send(
-            $financeIds,
-            'New Payment '.$payment->payment_number,
-            "{$user->franchise?->name} submitted a payment of ".number_format((float) $request->amount, 0).' UGX.',
-            'payment',
-            PaymentSubmission::class,
-            $payment->id,
-            'finance/payments/detail',
-        );
-
-        return response()->json(['message' => 'Payment submitted successfully.', 'data' => $payment->load('orders')], 201);
+        return response()->json(['message' => 'Payment submitted successfully.', 'data' => $payment], 201);
     }
 
     public function show(PaymentSubmission $paymentSubmission): JsonResponse

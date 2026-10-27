@@ -23,6 +23,8 @@ class FranchiseOrderAndPaymentTest extends TestCase
 
     protected User $staffUser;
 
+    protected User $warehouseUser;
+
     protected User $financeUser;
 
     protected User $franchiseUser;
@@ -48,6 +50,14 @@ class FranchiseOrderAndPaymentTest extends TestCase
         $this->staffRole = Role::create(['name' => 'Farmmantra Staff', 'guard_name' => 'web']);
         $this->financeRole = Role::create(['name' => 'Finance Department', 'guard_name' => 'web']);
         $this->franchiseRole = Role::create(['name' => 'Franchise Partner', 'guard_name' => 'web']);
+        $warehouseRole = Role::create(['name' => 'Warehouse', 'guard_name' => 'web']);
+        $this->warehouseUser = User::create([
+            'name' => 'Warehouse User',
+            'email' => 'warehouse@test.com',
+            'password' => bcrypt('password'),
+            'role_id' => $warehouseRole->id,
+            'is_active' => true,
+        ]);
 
         // Create franchise
         $this->franchise = Franchise::create([
@@ -90,6 +100,8 @@ class FranchiseOrderAndPaymentTest extends TestCase
             'role_id' => $this->franchiseRole->id,
             'franchise_id' => $this->franchise->id,
             'is_active' => true,
+            'terms_accepted_at' => now(),
+            'terms_version' => 1,
         ]);
 
         // Create category and product
@@ -166,8 +178,12 @@ class FranchiseOrderAndPaymentTest extends TestCase
         $order = Order::find($orderResponse->json('data.id'));
         $this->assertNotNull($order);
 
-        // 2. Staff approves the order
+        // 2. Warehouse approves the order (sales staff only monitor)
         Sanctum::actingAs($this->staffUser);
+        $this->postJson("/api/staff/orders/{$order->id}/approve", [
+            'expected_delivery_date' => now()->addDays(5)->toDateString(),
+        ])->assertStatus(403);
+        Sanctum::actingAs($this->warehouseUser);
         $approveResponse = $this->postJson("/api/staff/orders/{$order->id}/approve", [
             'expected_delivery_date' => now()->addDays(5)->toDateString(),
             'notes' => 'Approved to dispatch',
@@ -181,9 +197,18 @@ class FranchiseOrderAndPaymentTest extends TestCase
         $this->assertEquals('pending', $stockReceipt->status);
         $this->assertEquals(0.00, $this->franchise->fresh()->account_balance);
 
-        // 3. Franchise confirms stock receipt receipt
+        // 3. Warehouse dispatches (credit order: no prepayment needed)
+        $this->postJson("/api/staff/orders/{$order->id}/dispatch", [
+            'dispatch_means' => 'truck',
+            'dispatch_vehicle' => 'UBA 123X',
+        ])->assertStatus(200);
+
+        // 4. Franchise accepts the delivery (terms must be accepted)
         Sanctum::actingAs($this->franchiseUser);
         $receiptItem = $stockReceipt->items->first();
+        $this->postJson("/api/franchise/stock-receipts/{$stockReceipt->id}/confirm", [
+            'items' => [['stock_receipt_item_id' => $receiptItem->id, 'received_quantity' => 10]],
+        ])->assertStatus(422)->assertJsonValidationErrors('accept_terms');
         $confirmResponse = $this->postJson("/api/franchise/stock-receipts/{$stockReceipt->id}/confirm", [
             'items' => [
                 [
@@ -191,6 +216,7 @@ class FranchiseOrderAndPaymentTest extends TestCase
                     'received_quantity' => 10,
                 ],
             ],
+            'accept_terms' => true,
             'notes' => 'All items received intact',
         ]);
 

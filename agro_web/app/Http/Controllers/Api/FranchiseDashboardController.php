@@ -20,8 +20,19 @@ class FranchiseDashboardController extends Controller
         $franchiseId = $user->franchise_id;
         $now = now();
 
+        $monthSales = Sale::where('franchise_id', $franchiseId)
+            ->whereMonth('sale_date', $now->month)
+            ->whereYear('sale_date', $now->year);
+        $monthRevenue = (float) (clone $monthSales)->sum('final_amount');
+        $monthCost = (float) (clone $monthSales)->sum('total_cost');
+
         $data = [
             'summary' => [
+                'sales_count_this_month' => (clone $monthSales)->count(),
+                'profit_this_month' => round($monthRevenue - $monthCost, 2),
+                'cost_of_sales_this_month' => round($monthCost, 2),
+                'overdue_dispatch_orders' => Order::where('franchise_id', $franchiseId)->dispatchOverdue()->count(),
+                'awaiting_acceptance' => Order::where('franchise_id', $franchiseId)->whereIn('delivery_status', ['out_for_delivery', 'delivered'])->count(),
                 'total_sales_this_month' => Sale::where('franchise_id', $franchiseId)
                     ->whereMonth('sale_date', $now->month)
                     ->whereYear('sale_date', $now->year)

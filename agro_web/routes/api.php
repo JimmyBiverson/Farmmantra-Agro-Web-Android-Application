@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AccountController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuditController;
 use App\Http\Controllers\Api\AuthController;
@@ -51,6 +52,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/device-token', [AuthController::class, 'updateDeviceToken']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
 
+    // ── Terms & conditions (first login + every delivery) ────
+    Route::get('/terms', [AccountController::class, 'terms']);
+    Route::post('/terms/accept', [AccountController::class, 'acceptTerms']);
+
+    // ── Printable documents (signed browser links) & stock report
+    Route::get('/print-links/{type}/{id}', [AccountController::class, 'printLink'])->whereNumber('id');
+    Route::get('/stock-report', [AccountController::class, 'stockReport'])
+        ->middleware('api.role:System Administrator,Farmmantra Staff,Warehouse,Franchise Partner');
+
     // ── Notifications (all authenticated) ────────────────────
     Route::get('/notifications', [NotificationController::class, 'index']);
     Route::post('/notifications/{id}/read', [NotificationController::class, 'markRead']);
@@ -97,7 +107,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // ══════════════════════════════════════════════════════════
     // FRANCHISE PARTNER
     // ══════════════════════════════════════════════════════════
-    Route::middleware(['api.role:Franchise Partner', 'franchise.active'])->prefix('franchise')->group(function () {
+    Route::middleware(['api.role:Franchise Partner', 'franchise.active', 'terms.accepted'])->prefix('franchise')->group(function () {
 
         Route::get('/dashboard', FranchiseDashboardController::class);
 
@@ -117,6 +127,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/customers', [CustomerController::class, 'index']);
         Route::post('/customers', [CustomerController::class, 'store']);
         Route::get('/customers/{customer}', [CustomerController::class, 'show']);
+        Route::get('/districts', [CustomerController::class, 'districts']);
+
+        Route::get('/statement', [AccountController::class, 'myStatement']);
 
         Route::get('/inventory', [FranchiseInventoryController::class, 'index']);
         Route::get('/inventory/low-stock', [FranchiseInventoryController::class, 'lowStock']);
@@ -128,24 +141,30 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // ══════════════════════════════════════════════════════════
-    // FARMMANTRA STAFF
+    // FARMMANTRA STAFF (monitor only) + WAREHOUSE (accept & dispatch)
+    // Sales staff can view everything here; only the Warehouse role (and
+    // admin) can accept, decline, adjust, dispatch or change stock.
     // ══════════════════════════════════════════════════════════
-    Route::middleware('api.role:Farmmantra Staff')->prefix('staff')->group(function () {
+    Route::middleware('api.role:Farmmantra Staff,Warehouse,System Administrator')->prefix('staff')->group(function () {
 
         Route::get('/dashboard', StaffDashboardController::class);
 
         Route::get('/orders', [StaffOrderController::class, 'index']);
         Route::get('/orders/{order}', [StaffOrderController::class, 'show']);
-        Route::post('/orders/{order}/approve', [StaffOrderController::class, 'approve']);
-        Route::post('/orders/{order}/decline', [StaffOrderController::class, 'decline']);
-        Route::post('/orders/{order}/adjust', [StaffOrderController::class, 'adjust']);
-        Route::post('/orders/{order}/dispatch', [StaffOrderController::class, 'dispatch']);
-        Route::post('/orders/{order}/mark-delivered', [StaffOrderController::class, 'markDelivered']);
-        Route::post('/orders/{order}/decline-delivery', [StaffOrderController::class, 'declineDelivery']);
+        Route::get('/dispatch-options', [StaffOrderController::class, 'dispatchOptions']);
 
         Route::get('/warehouse-stock', [StaffInventoryController::class, 'warehouseStock']);
         Route::get('/franchise-stock', [StaffInventoryController::class, 'franchiseStock']);
-        Route::post('/warehouse-stock', [StaffInventoryController::class, 'updateWarehouseStock']);
+
+        Route::middleware('api.role:Warehouse,System Administrator')->group(function () {
+            Route::post('/orders/{order}/approve', [StaffOrderController::class, 'approve']);
+            Route::post('/orders/{order}/decline', [StaffOrderController::class, 'decline']);
+            Route::post('/orders/{order}/adjust', [StaffOrderController::class, 'adjust']);
+            Route::post('/orders/{order}/dispatch', [StaffOrderController::class, 'dispatch']);
+            Route::post('/orders/{order}/mark-delivered', [StaffOrderController::class, 'markDelivered']);
+            Route::post('/orders/{order}/decline-delivery', [StaffOrderController::class, 'declineDelivery']);
+            Route::post('/warehouse-stock', [StaffInventoryController::class, 'updateWarehouseStock']);
+        });
     });
 
     // ══════════════════════════════════════════════════════════
@@ -162,6 +181,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/payments/{paymentSubmission}/accept', [FinanceController::class, 'accept']);
         Route::post('/payments/{paymentSubmission}/reject', [FinanceController::class, 'reject']);
         Route::post('/payments/{paymentSubmission}/request-info', [FinanceController::class, 'requestInfo']);
+    });
+
+    // ── Franchise account statements (finance + admin) ───────
+    Route::middleware('api.role:Finance Department,System Administrator')->group(function () {
+        Route::get('/statements/{franchise}', [AccountController::class, 'franchiseStatement']);
     });
 
     // ══════════════════════════════════════════════════════════
