@@ -1,3 +1,5 @@
+> **Superseded:** see `REQUIREMENTS_MATRIX.md` for the October 2026 requirements matrix (original document + client's handwritten changes), defects fixed and test evidence. The text below is the August 2026 audit, kept for history.
+
 # Farmmantra Requirements Status
 
 Audited against the June 2026 requirements document on 20 August 2026.

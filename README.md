@@ -79,6 +79,50 @@ php artisan migrate
 php artisan serve
 ```
 
+## Upgrading an existing installation (October 2026 client update)
+
+```bash
+git pull
+cd agro_web
+composer install
+php artisan migrate            # additive: regions, all Uganda districts, ledger, signatures, Warehouse role…
+php artisan ledger:sync-opening-balances --dry-run   # check statements vs balances
+php artisan ledger:sync-opening-balances             # only if differences are reported
+npm install && npm run build   # admin styles (Tailwind via Vite)
+
+cd ../agro_mobile
+flutter pub get                # adds url_launcher (printing)
+flutter analyze && flutter test
+flutter build apk --release
+```
+
+Back up the production database before `php artisan migrate`. The migration only adds tables and columns; it backfills each franchise statement from confirmed receipts and accepted payments, with any remaining difference posted as an opening balance.
+
+**New configuration (`agro_web/.env`)**
+
+| Key | Purpose |
+|---|---|
+| `SMS_DRIVER` | `log` (default — SMS are recorded, not sent) or `africastalking` |
+| `SMS_AT_USERNAME`, `SMS_AT_API_KEY`, `SMS_SENDER_ID` | Africa's Talking account for bulk SMS |
+
+**New roles and first steps**
+
+1. Create **Warehouse** users (Admin → Users). The warehouse accepts, declines, adjusts and dispatches orders; Farmmantra (sales) staff now monitor and raise support tickets.
+2. Admin → Regions & Districts: create business regions (e.g. *Gulu Region*), tick their districts and the franchise serving them.
+3. Admin → Products: set the **Franchise**, **Retail** and **Farmer** price of each SKU.
+4. Admin → Terms & Operations: review the franchise terms (partners accept them at first login) and the dispatch target (default 15 days).
+
+Demo logins after `php artisan db:seed` (password `password123`): admin@, staff@, warehouse@, finance@, franchise@farmmantra.co.ug.
+
+## Testing
+
+```bash
+cd agro_web && php artisan test        # 38 tests: workflows, client requirements, every page × every role
+cd agro_mobile && flutter test         # includes test/client_update_test.dart
+```
+
+See `REQUIREMENTS_MATRIX.md` for the requirement-by-requirement status.
+
 ## Notes
 
 This project is designed to showcase a professional agri-business workflow with clear roles, data visibility, and operational dashboards. The design is intended to feel modern and production-friendly for agricultural commerce operations.
