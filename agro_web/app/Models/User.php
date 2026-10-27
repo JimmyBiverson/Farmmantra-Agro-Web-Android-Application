@@ -111,7 +111,7 @@ class User extends Authenticatable
             return $this->avatar;
         }
 
-        return url('storage/' . ltrim($this->avatar, '/'));
+        return url('storage/'.ltrim($this->avatar, '/'));
     }
 
     public function getDisplayNameAttribute(): string

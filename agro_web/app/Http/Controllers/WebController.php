@@ -27,12 +27,12 @@ use App\Models\StockMovement;
 use App\Models\StockReceipt;
 use App\Models\User;
 use App\Models\WarehouseInventory;
-use Illuminate\Support\Facades\DB;
 use App\Services\ActivityLogger;
 use App\Services\BusinessResetService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -105,14 +105,14 @@ class WebController extends Controller
                 'total_outstanding' => Franchise::where('account_balance', '>', 0)->sum('account_balance'),
                 'low_stock_products' => WarehouseInventory::whereColumn('quantity', '<=', 'reorder_level')->count(),
                 'total_inventory_value' => WarehouseInventory::join('products', 'products.id', '=', 'warehouse_inventories.product_id')
-                    ->sum(\Illuminate\Support\Facades\DB::raw('warehouse_inventories.quantity * products.standard_price')),
+                    ->sum(DB::raw('warehouse_inventories.quantity * products.standard_price')),
             ];
-            $dashboard['sales_by_franchise'] = Sale::select('franchise_id', \Illuminate\Support\Facades\DB::raw('SUM(final_amount) as total_sales'), \Illuminate\Support\Facades\DB::raw('COUNT(*) as sale_count'))->whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year)->with('franchise:id,name,code')->groupBy('franchise_id')->orderByDesc('total_sales')->get();
-            $dashboard['sales_trend'] = Sale::select(\Illuminate\Support\Facades\DB::raw('DATE(sale_date) as date'), \Illuminate\Support\Facades\DB::raw('SUM(final_amount) as total_sales'), \Illuminate\Support\Facades\DB::raw('COUNT(*) as sale_count'))->where('sale_date', '>=', $now->copy()->subDays(30)->startOfDay())->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(sale_date)'))->orderBy('date')->get();
-            $dashboard['top_products'] = SaleItem::select('product_id', \Illuminate\Support\Facades\DB::raw('SUM(quantity) as total_qty'), \Illuminate\Support\Facades\DB::raw('SUM(subtotal) as total_revenue'))->with('product:id,name,sku')->groupBy('product_id')->orderByDesc('total_revenue')->limit(10)->get();
+            $dashboard['sales_by_franchise'] = Sale::select('franchise_id', DB::raw('SUM(final_amount) as total_sales'), DB::raw('COUNT(*) as sale_count'))->whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year)->with('franchise:id,name,code')->groupBy('franchise_id')->orderByDesc('total_sales')->get();
+            $dashboard['sales_trend'] = Sale::select(DB::raw('DATE(sale_date) as date'), DB::raw('SUM(final_amount) as total_sales'), DB::raw('COUNT(*) as sale_count'))->where('sale_date', '>=', $now->copy()->subDays(30)->startOfDay())->groupBy(DB::raw('DATE(sale_date)'))->orderBy('date')->get();
+            $dashboard['top_products'] = SaleItem::select('product_id', DB::raw('SUM(quantity) as total_qty'), DB::raw('SUM(subtotal) as total_revenue'))->with('product:id,name,sku')->groupBy('product_id')->orderByDesc('total_revenue')->limit(10)->get();
             $dashboard['recent_orders'] = Order::with(['franchise:id,name,code', 'items.product:id,name'])->latest()->limit(10)->get();
             $dashboard['franchise_performance'] = Franchise::select('franchises.*')->withCount(['orders as total_orders' => fn ($q) => $q->whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)])->withSum(['orders as total_order_value' => fn ($q) => $q->whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)], 'total_amount')->withCount(['sales as total_sales_count' => fn ($q) => $q->whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year)])->withSum(['sales as total_sales_value' => fn ($q) => $q->whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year)], 'final_amount')->orderByDesc('total_sales_value')->get();
-            $dashboard['order_status_breakdown'] = Order::select('status', \Illuminate\Support\Facades\DB::raw('COUNT(*) as count'))->groupBy('status')->get();
+            $dashboard['order_status_breakdown'] = Order::select('status', DB::raw('COUNT(*) as count'))->groupBy('status')->get();
         } elseif ($role === 'Farmmantra Staff') {
             $dashboard['summary'] = [
                 'pending_orders' => Order::where('status', 'pending')->count(),
@@ -122,14 +122,14 @@ class WebController extends Controller
                 'total_orders_value_this_month' => Order::whereMonth('created_at', $now->month)->whereYear('created_at', $now->year)->sum('total_amount'),
                 'low_stock_products' => WarehouseInventory::whereColumn('quantity', '<=', 'reorder_level')->count(),
                 'total_warehouse_value' => WarehouseInventory::join('products', 'products.id', '=', 'warehouse_inventories.product_id')
-                    ->sum(\Illuminate\Support\Facades\DB::raw('warehouse_inventories.quantity * products.standard_price')),
+                    ->sum(DB::raw('warehouse_inventories.quantity * products.standard_price')),
                 'active_franchises' => Franchise::where('is_active', true)->count(),
             ];
             $dashboard['pending_orders_list'] = Order::where('status', 'pending')->with(['franchise:id,name,code', 'items.product:id,name,sku'])->latest()->limit(10)->get();
             $dashboard['recent_approved_orders'] = Order::where('status', 'approved')->with(['franchise:id,name,code', 'items.product:id,name'])->latest()->limit(5)->get();
             $dashboard['warehouse_stock'] = WarehouseInventory::with('product:id,name,sku,unit_of_measure')->get();
-            $dashboard['orders_by_status'] = Order::select('status', \Illuminate\Support\Facades\DB::raw('COUNT(*) as count'))->groupBy('status')->get();
-            $dashboard['orders_trend'] = Order::select(\Illuminate\Support\Facades\DB::raw('DATE(created_at) as date'), \Illuminate\Support\Facades\DB::raw('COUNT(*) as order_count'), \Illuminate\Support\Facades\DB::raw('SUM(total_amount) as total_value'))->where('created_at', '>=', $now->copy()->subDays(30)->startOfDay())->groupBy(\Illuminate\Support\Facades\DB::raw('DATE(created_at)'))->orderBy('date')->get();
+            $dashboard['orders_by_status'] = Order::select('status', DB::raw('COUNT(*) as count'))->groupBy('status')->get();
+            $dashboard['orders_trend'] = Order::select(DB::raw('DATE(created_at) as date'), DB::raw('COUNT(*) as order_count'), DB::raw('SUM(total_amount) as total_value'))->where('created_at', '>=', $now->copy()->subDays(30)->startOfDay())->groupBy(DB::raw('DATE(created_at)'))->orderBy('date')->get();
         } elseif ($role === 'Finance Department') {
             $dashboard['summary'] = [
                 'pending_payments_count' => PaymentSubmission::where('status', 'pending')->count(),
@@ -154,7 +154,7 @@ class WebController extends Controller
                 'credit_used_percentage' => $user->franchise?->credit_limit > 0 ? round(($user->franchise->account_balance / $user->franchise->credit_limit) * 100, 1) : 0,
                 'low_stock_items' => FranchiseInventory::where('franchise_id', $franchiseId)->whereColumn('quantity', '<=', 'reorder_level')->count(),
             ];
-            $dashboard['sales_by_category'] = \Illuminate\Support\Facades\DB::table('sale_items')->join('sales', 'sales.id', '=', 'sale_items.sale_id')->join('products', 'products.id', '=', 'sale_items.product_id')->join('categories', 'categories.id', '=', 'products.category_id')->where('sales.franchise_id', $franchiseId)->whereMonth('sales.sale_date', $now->month)->whereYear('sales.sale_date', $now->year)->select('categories.name as category_name', \Illuminate\Support\Facades\DB::raw('SUM(sale_items.subtotal) as total_sales'), \Illuminate\Support\Facades\DB::raw('SUM(sale_items.quantity) as total_qty'))->groupBy('categories.name')->orderByDesc('total_sales')->get();
+            $dashboard['sales_by_category'] = DB::table('sale_items')->join('sales', 'sales.id', '=', 'sale_items.sale_id')->join('products', 'products.id', '=', 'sale_items.product_id')->join('categories', 'categories.id', '=', 'products.category_id')->where('sales.franchise_id', $franchiseId)->whereMonth('sales.sale_date', $now->month)->whereYear('sales.sale_date', $now->year)->select('categories.name as category_name', DB::raw('SUM(sale_items.subtotal) as total_sales'), DB::raw('SUM(sale_items.quantity) as total_qty'))->groupBy('categories.name')->orderByDesc('total_sales')->get();
             $dashboard['sales_targets'] = SalesTarget::where('franchise_id', $franchiseId)->where('month', $now->month)->where('year', $now->year)->with('productCategory:id,name')->get()->map(function ($target) use ($franchiseId, $now) {
                 $actualSales = Sale::where('franchise_id', $franchiseId)->whereMonth('sale_date', $now->month)->whereYear('sale_date', $now->year);
                 if ($target->product_category_id) {
@@ -781,7 +781,7 @@ class WebController extends Controller
             'total_collected_ytd' => PaymentSubmission::where('status', 'accepted')->whereYear('accepted_at', $now->year)->sum('verified_amount'),
             'total_collected_month' => PaymentSubmission::where('status', 'accepted')->whereMonth('accepted_at', $now->month)->sum('verified_amount'),
             'total_outstanding' => Franchise::where('account_balance', '>', 0)->sum('account_balance'),
-            'monthly_collections' => PaymentSubmission::where('status', 'accepted')->select(\Illuminate\Support\Facades\DB::raw("{$monthSql('accepted_at')} as month"), \Illuminate\Support\Facades\DB::raw('SUM(verified_amount) as total'))->whereYear('accepted_at', $now->year)->groupBy(\Illuminate\Support\Facades\DB::raw($monthSql('accepted_at')))->orderBy('month')->get(),
+            'monthly_collections' => PaymentSubmission::where('status', 'accepted')->select(DB::raw("{$monthSql('accepted_at')} as month"), DB::raw('SUM(verified_amount) as total'))->whereYear('accepted_at', $now->year)->groupBy(DB::raw($monthSql('accepted_at')))->orderBy('month')->get(),
             'monthly_reconciliation' => collect(),
         ];
 
@@ -935,7 +935,7 @@ class WebController extends Controller
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
         $data = $request->only('name', 'sku', 'category_id', 'unit_of_measure', 'selling_price', 'standard_price', 'packaging_details', 'description');
-        
+
         $taxEnabled = $request->boolean('tax_enabled');
         $taxType = $request->input('tax_type', 'percentage');
         $taxRate = (float) $request->input('tax_rate', 0);
@@ -981,10 +981,10 @@ class WebController extends Controller
         WarehouseInventory::updateOrCreate(
             ['product_id' => $product->id],
             [
-                'quantity'           => $initialStock,
-                'reserved_quantity'  => 0,
-                'reorder_level'      => $reorderLevel,
-                'last_restocked_at'  => $initialStock > 0 ? now() : null,
+                'quantity' => $initialStock,
+                'reserved_quantity' => 0,
+                'reorder_level' => $reorderLevel,
+                'last_restocked_at' => $initialStock > 0 ? now() : null,
             ]
         );
 
@@ -1106,9 +1106,9 @@ class WebController extends Controller
             WarehouseInventory::updateOrCreate(
                 ['product_id' => $product->id],
                 [
-                    'quantity'           => (float) $request->input('warehouse_qty'),
-                    'reorder_level'      => (float) ($request->input('reorder_level', 0)),
-                    'last_restocked_at'  => now(),
+                    'quantity' => (float) $request->input('warehouse_qty'),
+                    'reorder_level' => (float) ($request->input('reorder_level', 0)),
+                    'last_restocked_at' => now(),
                 ]
             );
         } elseif ($request->filled('reorder_level')) {
@@ -1727,7 +1727,7 @@ class WebController extends Controller
 
         $user = auth()->user();
 
-        $order = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $user) {
+        $order = DB::transaction(function () use ($request, $user) {
             $order = Order::create([
                 'order_number' => Order::generateOrderNumber(),
                 'franchise_id' => $user->franchise_id,
@@ -1776,7 +1776,7 @@ class WebController extends Controller
 
         $user = auth()->user();
 
-        $sale = \Illuminate\Support\Facades\DB::transaction(function () use ($request, $user) {
+        $sale = DB::transaction(function () use ($request, $user) {
             $totalAmount = 0;
             foreach ($request->items as $item) {
                 $inventory = FranchiseInventory::where('franchise_id', $user->franchise_id)

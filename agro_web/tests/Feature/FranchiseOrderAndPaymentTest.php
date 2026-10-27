@@ -20,14 +20,23 @@ class FranchiseOrderAndPaymentTest extends TestCase
     use RefreshDatabase;
 
     protected User $adminUser;
+
     protected User $staffUser;
+
     protected User $financeUser;
+
     protected User $franchiseUser;
+
     protected Franchise $franchise;
+
     protected Product $product;
+
     protected Role $adminRole;
+
     protected Role $staffRole;
+
     protected Role $financeRole;
+
     protected Role $franchiseRole;
 
     protected function setUp(): void
@@ -116,9 +125,9 @@ class FranchiseOrderAndPaymentTest extends TestCase
                 [
                     'product_id' => $this->product->id,
                     'quantity' => 21,
-                ]
+                ],
             ],
-            'notes' => 'Oversized order'
+            'notes' => 'Oversized order',
         ]);
 
         $response->assertStatus(422)
@@ -130,9 +139,9 @@ class FranchiseOrderAndPaymentTest extends TestCase
                 [
                     'product_id' => $this->product->id,
                     'quantity' => 10,
-                ]
+                ],
             ],
-            'notes' => 'Normal order'
+            'notes' => 'Normal order',
         ]);
 
         $response->assertStatus(201);
@@ -148,9 +157,9 @@ class FranchiseOrderAndPaymentTest extends TestCase
                 [
                     'product_id' => $this->product->id,
                     'quantity' => 10,
-                ]
+                ],
             ],
-            'notes' => 'Normal order'
+            'notes' => 'Normal order',
         ]);
 
         $orderResponse->assertStatus(201);
@@ -180,7 +189,7 @@ class FranchiseOrderAndPaymentTest extends TestCase
                 [
                     'stock_receipt_item_id' => $receiptItem->id,
                     'received_quantity' => 10,
-                ]
+                ],
             ],
             'notes' => 'All items received intact',
         ]);

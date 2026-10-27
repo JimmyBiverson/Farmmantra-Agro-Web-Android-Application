@@ -152,7 +152,7 @@ class DatabaseSeeder extends Seeder
 
         $productModels = [];
         foreach ($products as $p) {
-            $image = 'products/' . $p['sku'] . '.png';
+            $image = 'products/'.$p['sku'].'.png';
             $productModels[$p['sku']] = Product::firstOrCreate(
                 ['sku' => $p['sku']],
                 [

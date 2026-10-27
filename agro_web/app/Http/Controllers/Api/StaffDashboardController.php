@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Conversation;
 use App\Models\Franchise;
 use App\Models\Message;
 use App\Models\Order;

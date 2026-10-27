@@ -356,4 +356,3 @@ class StaffOrderController extends Controller
         return response()->json(['message' => 'Delivery declined.', 'data' => $order->fresh()]);
     }
 }
-

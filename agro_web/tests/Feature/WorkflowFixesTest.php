@@ -25,14 +25,23 @@ class WorkflowFixesTest extends TestCase
     use RefreshDatabase;
 
     protected User $adminUser;
+
     protected User $staffUser;
+
     protected User $financeUser;
+
     protected User $franchiseUser;
+
     protected Franchise $franchise;
+
     protected Product $product;
+
     protected Role $adminRole;
+
     protected Role $staffRole;
+
     protected Role $financeRole;
+
     protected Role $franchiseRole;
 
     protected function setUp(): void
@@ -251,23 +260,23 @@ class WorkflowFixesTest extends TestCase
         $this->assertStringContainsString('products/', $product->image);
         Storage::disk('public')->assertExists($product->image);
         $this->assertNotNull($product->image_url);
-        $this->assertStringContainsString('storage/' . $product->image, $product->image_url);
+        $this->assertStringContainsString('storage/'.$product->image, $product->image_url);
     }
 
     public function test_products_api_includes_image_url(): void
     {
-        $this->product->update(['image' => 'products/' . $this->product->sku . '.png']);
+        $this->product->update(['image' => 'products/'.$this->product->sku.'.png']);
 
         Sanctum::actingAs($this->franchiseUser);
-        $response = $this->getJson('/api/products?search=' . urlencode($this->product->sku));
+        $response = $this->getJson('/api/products?search='.urlencode($this->product->sku));
 
         $response->assertStatus(200);
         $items = $response->json('data') ?? collect($response->json('data'));
         $found = collect($items)->firstWhere('id', $this->product->id);
 
         $this->assertNotNull($found);
-        $this->assertEquals('products/' . $this->product->sku . '.png', $found['image']);
-        $this->assertStringContainsString('storage/products/' . $this->product->sku . '.png', $found['image_url']);
+        $this->assertEquals('products/'.$this->product->sku.'.png', $found['image']);
+        $this->assertStringContainsString('storage/products/'.$this->product->sku.'.png', $found['image_url']);
     }
 
     public function test_admin_user_creation_requires_matching_password_confirmation(): void

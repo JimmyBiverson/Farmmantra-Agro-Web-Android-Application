@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\FranchiseInventoryController;
 use App\Http\Controllers\Api\FranchiseOrderController;
 use App\Http\Controllers\Api\FranchiseSalesController;
 use App\Http\Controllers\Api\MasterDataController;
+use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReportController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\Api\StaffInventoryController;
 use App\Http\Controllers\Api\StaffOrderController;
 use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\StockReceiptController;
+use App\Http\Controllers\Api\SupportTicketController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -34,9 +36,9 @@ use Illuminate\Support\Facades\Route;
 // ─── Public ──────────────────────────────────────────────────────
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::get('/settings/public', [SettingsController::class, 'public']);
-Route::get('/slides', [\App\Http\Controllers\Api\NewsController::class, 'slides']);
-Route::get('/news', [\App\Http\Controllers\Api\NewsController::class, 'news']);
-Route::get('/news/{news}', [\App\Http\Controllers\Api\NewsController::class, 'showNews']);
+Route::get('/slides', [NewsController::class, 'slides']);
+Route::get('/news', [NewsController::class, 'news']);
+Route::get('/news/{news}', [NewsController::class, 'showNews']);
 
 // ─── Authenticated ───────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
@@ -72,9 +74,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/conversations/{conversation}/read', [ChatController::class, 'markRead']);
     Route::get('/conversations/{conversation}/messages/since/{afterId?}', [ChatController::class, 'messagesSince']);
 
-    Route::get('/support-tickets', [\App\Http\Controllers\Api\SupportTicketController::class, 'index']);
-    Route::post('/support-tickets', [\App\Http\Controllers\Api\SupportTicketController::class, 'store']);
-    Route::get('/support-tickets/{ticket}', [\App\Http\Controllers\Api\SupportTicketController::class, 'show']);
+    Route::get('/support-tickets', [SupportTicketController::class, 'index']);
+    Route::post('/support-tickets', [SupportTicketController::class, 'store']);
+    Route::get('/support-tickets/{ticket}', [SupportTicketController::class, 'show']);
 
     // ── Reports (admin + finance) ────────────────────────────
     Route::middleware('api.role:System Administrator,Finance Department')->group(function () {

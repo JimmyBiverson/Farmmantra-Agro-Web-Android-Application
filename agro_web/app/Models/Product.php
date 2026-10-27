@@ -84,7 +84,7 @@ class Product extends Model
             $cleanPath = substr($cleanPath, 8);
         }
 
-        return url('storage/' . $cleanPath);
+        return url('storage/'.$cleanPath);
     }
 
     public function getAllImagesAttribute(): array
@@ -96,7 +96,7 @@ class Product extends Model
 
         if ($this->relationLoaded('images')) {
             foreach ($this->images as $img) {
-                if ($img->image_url && !in_array($img->image_url, $urls)) {
+                if ($img->image_url && ! in_array($img->image_url, $urls)) {
                     $urls[] = $img->image_url;
                 }
             }
@@ -110,13 +110,14 @@ class Product extends Model
         if ($this->tax_enabled && $this->final_price > 0) {
             return (float) $this->final_price;
         }
+
         return (float) $this->standard_price;
     }
 
     public function calculateTaxPrice(?float $basePrice = null): array
     {
         $base = $basePrice ?? (float) $this->standard_price;
-        if (!$this->tax_enabled) {
+        if (! $this->tax_enabled) {
             return [
                 'base_price' => $base,
                 'tax_enabled' => false,

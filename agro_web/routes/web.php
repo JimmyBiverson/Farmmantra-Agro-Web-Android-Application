@@ -2,8 +2,8 @@
 
 use App\Http\Controllers\WebController;
 use App\Http\Middleware\AuthenticateWeb;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/site-asset/{path}', function (string $path) {
     $disk = Storage::disk('public');
