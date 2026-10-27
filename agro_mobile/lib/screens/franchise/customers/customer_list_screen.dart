@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../../services/api/api_service.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../models/customer.dart';
@@ -141,7 +142,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
                     const Icon(Icons.phone, size: 12, color: AppColors.textSecondary),
                     const SizedBox(width: 4),
                     Text(
-                      customer.phone,
+                      '${customer.typeLabel} · ${customer.phone}${customer.districtName != null ? ' · ${customer.districtName}' : ''}',
                       style: const TextStyle(
                         fontSize: 12,
                         color: AppColors.textSecondary,
@@ -204,6 +205,25 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
   final _locationController = TextEditingController();
   final _notesController = TextEditingController();
   bool _isSaving = false;
+  String _customerType = 'farmer';
+  String? _districtId;
+  List<Map<String, dynamic>> _districts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDistricts();
+  }
+
+  /// Only districts of the franchise's region can be chosen.
+  Future<void> _loadDistricts() async {
+    try {
+      final list = await context.read<ApiService>().getDistricts();
+      if (mounted) setState(() => _districts = list);
+    } catch (_) {
+      // District stays optional if the list cannot be loaded.
+    }
+  }
 
   @override
   void dispose() {
@@ -258,6 +278,37 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
                 validator: (v) => Validators.required(v, 'Customer name'),
               ),
               const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _customerType,
+                decoration: const InputDecoration(
+                  labelText: 'Customer type',
+                  prefixIcon: Icon(Icons.category_outlined),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'farmer', child: Text('Farmer')),
+                  DropdownMenuItem(value: 'retailer', child: Text('Retailer')),
+                ],
+                onChanged: (v) => setState(() => _customerType = v ?? 'farmer'),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                initialValue: _districtId,
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'District',
+                  prefixIcon: Icon(Icons.map_outlined),
+                ),
+                items: _districts
+                    .map(
+                      (d) => DropdownMenuItem(
+                        value: d['id']?.toString(),
+                        child: Text(d['name']?.toString() ?? ''),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (v) => setState(() => _districtId = v),
+              ),
+              const SizedBox(height: 12),
               AppTextField(
                 controller: _phoneController,
                 label: 'Phone Number',
@@ -307,6 +358,8 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
     try {
       final success = await context.read<CustomerProvider>().createCustomer({
         'name': _nameController.text.trim(),
+        'customer_type': _customerType,
+        if (_districtId != null) 'district_id': int.tryParse(_districtId!),
         'phone': _phoneController.text.trim(),
         'address': _locationController.text.trim().isEmpty
             ? null
@@ -335,7 +388,10 @@ class _AddCustomerSheetState extends State<_AddCustomerSheet> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Failed to add customer. Please try again.'),
+            content: Text(
+              context.read<CustomerProvider>().error ??
+                  'Failed to add customer. Please try again.',
+            ),
             backgroundColor: AppColors.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(

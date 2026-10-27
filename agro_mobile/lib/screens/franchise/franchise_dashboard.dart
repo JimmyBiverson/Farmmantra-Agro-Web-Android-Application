@@ -17,6 +17,7 @@ import 'franchise_shell.dart';
 import 'orders/create_order_screen.dart';
 import 'orders/order_detail_screen.dart';
 import 'sales/create_sale_screen.dart';
+import '../../services/api/api_service.dart';
 
 class FranchiseDashboard extends StatefulWidget {
   const FranchiseDashboard({super.key});
@@ -114,6 +115,8 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
           if (_isLoading)
             const SizedBox(height: 200, child: Center(child: LoadingView()))
           else ...[
+            const MonthSummaryCard(),
+            const SizedBox(height: 12),
             _buildStatsGrid(context),
             const SizedBox(height: 8),
             SectionHeader(
@@ -842,6 +845,106 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// This month at a glance (client request): sales, profit, number of sales,
+/// stock value, pending orders and deliveries waiting to be accepted.
+class MonthSummaryCard extends StatefulWidget {
+  const MonthSummaryCard({super.key});
+
+  @override
+  State<MonthSummaryCard> createState() => _MonthSummaryCardState();
+}
+
+class _MonthSummaryCardState extends State<MonthSummaryCard> {
+  Map<String, dynamic>? _stats;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final stats = await context.read<ApiService>().getDashboardStats();
+    if (mounted) setState(() => _stats = stats);
+  }
+
+  static double _num(dynamic v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0;
+    return 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final s = _stats;
+    Widget tile(String label, String value, IconData icon, Color color) => SizedBox(
+      width: 150,
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                Text(
+                  value,
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'This month',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.textPrimary),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () => Navigator.of(context).pushNamed('/franchise/statement'),
+                icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                label: const Text('Statement'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          if (s == null)
+            const Padding(
+              padding: EdgeInsets.all(12),
+              child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+            )
+          else
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                tile('Sales', Formatters.currency(_num(s['total_sales_this_month'])), Icons.point_of_sale, AppColors.primaryGreen),
+                tile('Profit', Formatters.currency(_num(s['profit_this_month'])), Icons.trending_up, _num(s['profit_this_month']) < 0 ? AppColors.error : AppColors.success),
+                tile('Sales made', '${_num(s['sales_count_this_month']).toInt()}', Icons.receipt_outlined, AppColors.info),
+                tile('Stock value', Formatters.currency(_num(s['inventory_value'])), Icons.inventory_2_outlined, AppColors.info),
+                tile('Pending orders', '${_num(s['total_orders_pending']).toInt()}', Icons.hourglass_top, AppColors.warning),
+                tile('To accept', '${_num(s['awaiting_acceptance']).toInt()}', Icons.local_shipping_outlined, AppColors.primaryGreen),
+                tile('Balance owed', Formatters.currency(_num(s['outstanding_balance'])), Icons.account_balance_wallet_outlined, AppColors.warning),
+              ],
+            ),
         ],
       ),
     );

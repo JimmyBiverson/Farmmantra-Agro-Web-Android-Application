@@ -482,7 +482,12 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<Order> dispatchOrder(String id) async {
+  Future<Order> dispatchOrder(
+    String id, {
+    String means = 'truck',
+    String? vehicle,
+    String? remarks,
+  }) async {
     await _simulateDelay();
     final order = await getOrder(id);
     return Order(
@@ -497,6 +502,10 @@ class MockApiService implements ApiService {
       expectedDeliveryDate: order.expectedDeliveryDate,
       createdAt: order.createdAt,
       updatedAt: DateTime.now(),
+      dispatchMeans: means,
+      dispatchVehicle: vehicle,
+      dispatchRemarks: remarks,
+      dispatchedAt: DateTime.now(),
     );
   }
 
@@ -625,7 +634,11 @@ class MockApiService implements ApiService {
   }
 
   @override
-  Future<Order> confirmDelivery(String id, {String? notes}) async {
+  Future<Order> confirmDelivery(
+    String id, {
+    String? notes,
+    Map<String, double>? receivedQuantities,
+  }) async {
     await _simulateDelay();
     final order = await getOrder(id);
     return Order(
@@ -1271,5 +1284,77 @@ class MockApiService implements ApiService {
         createdAt: now.subtract(const Duration(days: 3)),
       ),
     ]);
+  }
+
+  @override
+  Future<Map<String, dynamic>> getTerms() async {
+    await _simulateDelay();
+    return {
+      'text': 'Demo terms and conditions.',
+      'version': 1,
+      'needs_acceptance': false,
+    };
+  }
+
+  @override
+  Future<void> acceptTerms() async {
+    await _simulateDelay();
+  }
+
+  @override
+  Future<Map<String, dynamic>> getAccountStatement({
+    String? from,
+    String? to,
+  }) async {
+    await _simulateDelay();
+    return {
+      'franchise': {'name': 'Demo Franchise', 'code': 'DEMO'},
+      'period': {'from': from, 'to': to},
+      'opening_balance': 0,
+      'transactions': [
+        {
+          'date': '2026-08-01',
+          'type': 'purchase',
+          'type_label': 'Purchase',
+          'description': 'Purchase — demo order',
+          'reference_number': 'ORD-DEMO-0001',
+          'credit': 1000000,
+          'debit': 0,
+          'balance': 1000000,
+        },
+        {
+          'date': '2026-08-02',
+          'type': 'payment',
+          'type_label': 'Payment',
+          'description': 'Payment (Mobile Money)',
+          'reference_number': 'PAY-DEMO-0001',
+          'credit': 0,
+          'debit': 900000,
+          'balance': 100000,
+        },
+      ],
+      'totals': {'credit': 1000000, 'debit': 900000},
+      'closing_balance': 100000,
+      'current_balance': 100000,
+    };
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getDistricts() async {
+    await _simulateDelay();
+    return [
+      {'id': 1, 'name': 'Gulu'},
+      {'id': 2, 'name': 'Amuru'},
+    ];
+  }
+
+  @override
+  Future<String> getPrintLink(
+    String type,
+    String id, {
+    Map<String, String>? query,
+  }) async {
+    await _simulateDelay();
+    return 'https://example.com/print/$type/$id';
   }
 }

@@ -142,6 +142,14 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Called after the franchise accepts the terms & conditions.
+  void markTermsAccepted() {
+    final current = _user;
+    if (current == null) return;
+    _user = current.copyWith(needsTermsAcceptance: false);
+    notifyListeners();
+  }
+
   Future<void> refreshProfile() async {
     try {
       _user = await _apiService.getProfile();

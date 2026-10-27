@@ -17,6 +17,11 @@ class User {
   final bool isActive;
   final Map<String, dynamic> notificationPreferences;
 
+  /// Franchise partners must accept the terms & conditions on first login
+  /// (and again whenever a new version is published).
+  final bool needsTermsAcceptance;
+  final String? franchiseRegion;
+
   const User({
     required this.id,
     required this.name,
@@ -32,6 +37,8 @@ class User {
     this.createdAt,
     this.isActive = true,
     this.notificationPreferences = const {},
+    this.needsTermsAcceptance = false,
+    this.franchiseRegion,
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
@@ -59,6 +66,8 @@ class User {
       notificationPreferences: json['notification_preferences'] is Map
           ? Map<String, dynamic>.from(json['notification_preferences'])
           : const {},
+      needsTermsAcceptance: json['needs_terms_acceptance'] == true,
+      franchiseRegion: json['franchise_region']?.toString(),
     );
   }
 
@@ -77,6 +86,8 @@ class User {
       'avatar_url': avatarUrl,
       'created_at': createdAt?.toIso8601String(),
       'is_active': isActive,
+      'needs_terms_acceptance': needsTermsAcceptance,
+      'franchise_region': franchiseRegion,
     };
   }
 
@@ -89,6 +100,7 @@ class User {
     String? avatarUrl,
     bool? isActive,
     Map<String, dynamic>? notificationPreferences,
+    bool? needsTermsAcceptance,
   }) {
     return User(
       id: id,
@@ -106,6 +118,8 @@ class User {
       isActive: isActive ?? this.isActive,
       notificationPreferences:
           notificationPreferences ?? this.notificationPreferences,
+      needsTermsAcceptance: needsTermsAcceptance ?? this.needsTermsAcceptance,
+      franchiseRegion: franchiseRegion,
     );
   }
 

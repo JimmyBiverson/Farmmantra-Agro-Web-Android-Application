@@ -25,6 +25,20 @@ class Order {
   final DateTime? approvedAt;
   final int paymentVerifiedCount;
 
+  /// 'credit' (pay later, within credit limit) or 'cash' (pay before dispatch).
+  final String paymentTerms;
+  final double amountPaid;
+  final String? dispatchMeans;
+  final String? dispatchVehicle;
+  final String? dispatchRemarks;
+  final DateTime? dispatchedAt;
+  final String? approvalSignature;
+  final String? dispatchSignature;
+  final String? deliverySignature;
+
+  /// Lines of the stock receipt the franchise accepts on delivery.
+  final List<ReceiptLine> receiptLines;
+
   const Order({
     required this.id,
     this.orderNumber,
@@ -49,7 +63,50 @@ class Order {
     this.approvedBy,
     this.approvedAt,
     this.paymentVerifiedCount = 0,
+    this.paymentTerms = 'credit',
+    this.amountPaid = 0,
+    this.dispatchMeans,
+    this.dispatchVehicle,
+    this.dispatchRemarks,
+    this.dispatchedAt,
+    this.approvalSignature,
+    this.dispatchSignature,
+    this.deliverySignature,
+    this.receiptLines = const [],
   });
+
+  static const Map<String, String> dispatchMeansLabels = {
+    'truck': 'Truck',
+    'bus': 'Bus',
+    'pickup': 'Pick-up',
+    'motorcycle': 'Motorcycle',
+    'collected': 'Collected by franchise',
+    'other': 'Other',
+  };
+
+  bool get isCashOrder => paymentTerms == 'cash';
+
+  double get balanceDue {
+    final due = totalAmount - amountPaid;
+    return due > 0 ? due : 0;
+  }
+
+  String? get dispatchMeansLabel =>
+      dispatchMeans == null ? null : (dispatchMeansLabels[dispatchMeans] ?? dispatchMeans);
+
+  /// Dispatched (or arrived) but not yet accepted by the franchise.
+  bool get awaitingFranchiseAcceptance =>
+      status != 'declined' &&
+      (deliveryStatus == 'out_for_delivery' || deliveryStatus == 'delivered');
+
+  /// Credit orders can be dispatched once approved; cash orders need an
+  /// accepted payment first.
+  bool get canBeDispatched =>
+      status == 'approved' &&
+      !isOutForDelivery &&
+      deliveryStatus != 'delivered' &&
+      deliveryStatus != 'confirmed' &&
+      (!isCashOrder || financeApproved);
 
   DeliveryStatus get deliveryStatusEnum {
     switch (deliveryStatus) {
@@ -190,6 +247,16 @@ class Order {
             json['payment_verified'] ??
             (financeAccepted ? 1 : 0),
       ),
+      paymentTerms: json['payment_terms']?.toString() ?? 'credit',
+      amountPaid: _toDouble(json['amount_paid']),
+      dispatchMeans: json['dispatch_means']?.toString(),
+      dispatchVehicle: json['dispatch_vehicle']?.toString(),
+      dispatchRemarks: json['dispatch_remarks']?.toString(),
+      dispatchedAt: _parseDate(json['dispatched_at']),
+      approvalSignature: json['approval_signature']?.toString(),
+      dispatchSignature: json['dispatch_signature']?.toString(),
+      deliverySignature: json['delivery_signature']?.toString(),
+      receiptLines: ReceiptLine.listFrom(json['stock_receipt']),
     );
   }
 
@@ -290,4 +357,43 @@ class OrderItem {
   }
 
   int get effectiveQuantity => adjustedQuantity ?? quantity;
+}
+
+/// One line of the stock receipt created when the warehouse approves an
+/// order. The franchise confirms the received quantity per line.
+class ReceiptLine {
+  final String id;
+  final String productName;
+  final double dispatchedQuantity;
+  final double receivedQuantity;
+
+  const ReceiptLine({
+    required this.id,
+    required this.productName,
+    required this.dispatchedQuantity,
+    this.receivedQuantity = 0,
+  });
+
+  static double _num(dynamic v) {
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? 0;
+    return 0;
+  }
+
+  static List<ReceiptLine> listFrom(dynamic receipt) {
+    if (receipt is! Map || receipt['items'] is! List) return const [];
+    return (receipt['items'] as List)
+        .whereType<Map>()
+        .map(
+          (i) => ReceiptLine(
+            id: i['id']?.toString() ?? '',
+            productName: i['product'] is Map
+                ? (i['product']['name']?.toString() ?? '')
+                : (i['product_name']?.toString() ?? ''),
+            dispatchedQuantity: _num(i['ordered_quantity']),
+            receivedQuantity: _num(i['received_quantity']),
+          ),
+        )
+        .toList();
+  }
 }

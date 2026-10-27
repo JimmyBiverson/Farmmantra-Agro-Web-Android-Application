@@ -27,6 +27,37 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
   final List<SaleLineItem> _saleItems = [];
   bool _isSubmitting = false;
 
+  /// 'farmer' or 'retailer' — follows the selected customer's type. Prices
+  /// per tier are fixed by Farmmantra; the franchise cannot type a price.
+  String _priceTier = 'farmer';
+  String _paymentMethod = 'cash';
+
+  static const _paymentMethods = {
+    'cash': 'Cash',
+    'mobile_money': 'Mobile Money',
+    'bank_transfer': 'Bank Transfer',
+    'credit': 'Credit (customer pays later)',
+  };
+
+  void _applyTier(String tier) {
+    final products = context.read<ProductProvider>().products;
+    setState(() {
+      _priceTier = tier;
+      for (var i = 0; i < _saleItems.length; i++) {
+        final item = _saleItems[i];
+        final product = products.where((p) => p.id == item.productId).firstOrNull;
+        if (product != null) {
+          _saleItems[i] = SaleLineItem(
+            productId: item.productId,
+            productName: item.productName,
+            quantity: item.quantity,
+            unitPrice: product.sellingPriceFor(tier),
+          );
+        }
+      }
+    });
+  }
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +89,8 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildCustomerSelector(),
+              const SizedBox(height: 12),
+              _buildPricingOptions(),
               const SizedBox(height: 16),
               _buildProductSelection(),
               const SizedBox(height: 16),
@@ -149,6 +182,51 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                 ),
               );
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPricingOptions() {
+    return AppCard(
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Selling price',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: [
+              ChoiceChip(
+                label: const Text('Farmer price'),
+                selected: _priceTier == 'farmer',
+                onSelected: (_) => _applyTier('farmer'),
+              ),
+              ChoiceChip(
+                label: const Text('Retail price'),
+                selected: _priceTier == 'retailer',
+                onSelected: (_) => _applyTier('retailer'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Prices are set by Farmmantra and cannot be changed.',
+            style: TextStyle(fontSize: 11, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _paymentMethod,
+            decoration: const InputDecoration(labelText: 'Payment method'),
+            items: _paymentMethods.entries
+                .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                .toList(),
+            onChanged: (v) => setState(() => _paymentMethod = v ?? 'cash'),
           ),
         ],
       ),
@@ -384,9 +462,10 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                                 ),
                               ),
                               title: Text(customer.name),
-                              subtitle: Text(customer.phone),
+                              subtitle: Text('${customer.typeLabel} · ${customer.phone}'),
                               onTap: () {
                                 setState(() => _selectedCustomer = customer);
+                                _applyTier(customer.customerType == 'retailer' ? 'retailer' : 'farmer');
                                 Navigator.pop(context);
                               },
                             );
@@ -458,7 +537,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                               ),
                             ),
                             subtitle: Text(
-                              '${product.categoryName} · ${Formatters.currency(product.standardPrice)}',
+                              '${product.categoryName} · ${Formatters.currency(product.sellingPriceFor(_priceTier))}',
                             ),
                             trailing: const Icon(
                               Icons.add_circle_outline,
@@ -494,7 +573,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Standard price: ${Formatters.currency(product.standardPrice)}',
+                '${_priceTier == 'retailer' ? 'Retail' : 'Farmer'} price: ${Formatters.currency(product.sellingPriceFor(_priceTier))}',
                 style: const TextStyle(
                   fontSize: 13,
                   color: AppColors.textSecondary,
@@ -517,7 +596,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
               onPressed: () {
                 final qty = int.tryParse(_quantityController.text) ?? 0;
                 if (qty > 0) {
-                  final price = product.getPriceForQuantity(qty);
+                  final price = product.sellingPriceFor(_priceTier);
                   setState(() {
                     _saleItems.add(SaleLineItem(
                       productId: product.id,
@@ -546,6 +625,8 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
       final apiService = context.read<ApiService>();
       await apiService.createSale({
         'customer_id': _selectedCustomer!.id,
+        'price_tier': _priceTier,
+        'payment_method': _paymentMethod,
         'items': _saleItems
             .map((item) => {
                   'product_id': item.productId,
@@ -555,7 +636,7 @@ class _CreateSaleScreenState extends State<CreateSaleScreen> {
                 })
             .toList(),
         'total_amount': _totalAmount,
-        'remarks': _remarksController.text.trim(),
+        'notes': _remarksController.text.trim(),
       });
 
       if (!mounted) return;

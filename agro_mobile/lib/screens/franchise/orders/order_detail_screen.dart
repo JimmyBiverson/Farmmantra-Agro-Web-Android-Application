@@ -13,6 +13,9 @@ import '../../../widgets/common/loading_view.dart';
 import '../../../widgets/common/product_image.dart';
 import '../../../widgets/common/status_badge.dart';
 import '../payments/payment_screen.dart';
+import '../../../services/api/api_service.dart';
+import '../../../services/print_service.dart';
+import '../../shared/terms/terms_screen.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
@@ -37,7 +40,31 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Order ${widget.orderId}')),
+      appBar: AppBar(
+        title: Text('Order ${widget.orderId}'),
+        actions: [
+          IconButton(
+            tooltip: 'Print order',
+            icon: const Icon(Icons.print_outlined),
+            onPressed: () => PrintService.open(
+              context,
+              context.read<ApiService>(),
+              'order',
+              widget.orderId,
+            ),
+          ),
+          IconButton(
+            tooltip: 'Print delivery note',
+            icon: const Icon(Icons.local_shipping_outlined),
+            onPressed: () => PrintService.open(
+              context,
+              context.read<ApiService>(),
+              'delivery-note',
+              widget.orderId,
+            ),
+          ),
+        ],
+      ),
       body: Consumer<OrderProvider>(
         builder: (context, provider, _) {
           if (provider.isLoading) {
@@ -72,6 +99,12 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   _buildOrderItems(order),
                   const SizedBox(height: 16),
                   _buildOrderTotal(order),
+                  const SizedBox(height: 16),
+                  _buildTermsAndBalance(order),
+                  if (order.awaitingFranchiseAcceptance) ...[
+                    const SizedBox(height: 16),
+                    _buildAcceptDeliveryCard(order, provider),
+                  ],
                   if (order.statusEnum == OrderStatus.approved &&
                       order.expectedDeliveryDate != null) ...[
                     const SizedBox(height: 16),
@@ -95,7 +128,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     const SizedBox(height: 16),
                     _buildAdjustmentInfo(order),
                   ],
-                  if (order.statusEnum == OrderStatus.delivered) ...[
+                  if (order.statusEnum == OrderStatus.delivered &&
+                      !order.awaitingFranchiseAcceptance) ...[
                     const SizedBox(height: 16),
                     _buildDeliveryConfirmation(order),
                   ],
@@ -753,6 +787,196 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildTermsAndBalance(Order order) {
+    Widget row(String label, String value, {Color? color}) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: color ?? AppColors.textPrimary),
+            ),
+          ),
+        ],
+      ),
+    );
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          row('Payment terms', order.isCashOrder ? 'Cash — pay before dispatch' : 'Credit'),
+          row('Paid', Formatters.currency(order.amountPaid), color: AppColors.success),
+          row('Balance due', Formatters.currency(order.balanceDue), color: order.balanceDue > 0 ? AppColors.warning : AppColors.success),
+          if (order.dispatchMeansLabel != null)
+            row('Dispatched by', '${order.dispatchMeansLabel}${(order.dispatchVehicle ?? '').isNotEmpty ? ' · ${order.dispatchVehicle}' : ''}'),
+          if ((order.dispatchRemarks ?? '').isNotEmpty) row('Dispatch remarks', order.dispatchRemarks!),
+          if (order.deliverySignature != null) row('Receipt signature', order.deliverySignature!),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAcceptDeliveryCard(Order order, OrderProvider provider) {
+    return AppCard(
+      color: AppColors.primaryGreen.withAlpha(13),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(Icons.inventory_2_outlined, color: AppColors.primaryGreen),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Your order has been dispatched',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primaryGreen),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'When the goods arrive, count them, then accept the delivery. '
+            'Your stock is updated and you are charged only for what you received.',
+            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: provider.isLoading ? null : () => _showAcceptDeliveryDialog(order, provider),
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text('Accept delivery'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAcceptDeliveryDialog(Order order, OrderProvider provider) async {
+    final controllers = <String, TextEditingController>{
+      for (final line in order.receiptLines)
+        line.id: TextEditingController(
+          text: line.dispatchedQuantity == line.dispatchedQuantity.roundToDouble()
+              ? line.dispatchedQuantity.toInt().toString()
+              : line.dispatchedQuantity.toString(),
+        ),
+    };
+    final notesController = TextEditingController();
+    bool accepted = false;
+    String? error;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (dialogContext, setDialogState) => AlertDialog(
+          title: const Text('Accept delivery'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (order.receiptLines.isEmpty)
+                  const Text('All dispatched items will be recorded as received.')
+                else
+                  ...order.receiptLines.map(
+                    (line) => Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: TextField(
+                        controller: controllers[line.id],
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          labelText: '${line.productName} received',
+                          helperText: 'Dispatched: ${line.dispatchedQuantity}',
+                        ),
+                      ),
+                    ),
+                  ),
+                TextField(
+                  controller: notesController,
+                  decoration: const InputDecoration(labelText: 'Shortage / damage notes (optional)'),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 8),
+                TextButton.icon(
+                  onPressed: () => Navigator.of(dialogContext).push(
+                    MaterialPageRoute(builder: (_) => const TermsScreen(readOnly: true)),
+                  ),
+                  icon: const Icon(Icons.description_outlined),
+                  label: const Text('Read terms & conditions'),
+                ),
+                CheckboxListTile(
+                  value: accepted,
+                  onChanged: (v) => setDialogState(() => accepted = v ?? false),
+                  controlAffinity: ListTileControlAffinity.leading,
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text(
+                    'I have counted the goods, read the terms and conditions and accept this delivery.',
+                    style: TextStyle(fontSize: 13),
+                  ),
+                ),
+                if (error != null)
+                  Text(error!, style: const TextStyle(color: AppColors.error, fontSize: 12)),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cancel')),
+            ElevatedButton(
+              onPressed: !accepted
+                  ? null
+                  : () {
+                      for (final line in order.receiptLines) {
+                        final v = double.tryParse(controllers[line.id]!.text.trim());
+                        if (v == null || v < 0 || v > line.dispatchedQuantity) {
+                          setDialogState(() => error = 'Enter 0 – ${line.dispatchedQuantity} for ${line.productName}.');
+                          return;
+                        }
+                      }
+                      Navigator.pop(dialogContext, true);
+                    },
+              child: const Text('Accept & sign'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    final quantities = <String, double>{
+      for (final line in order.receiptLines)
+        line.id: double.tryParse(controllers[line.id]!.text.trim()) ?? line.dispatchedQuantity,
+    };
+    final notes = notesController.text.trim();
+    for (final c in controllers.values) {
+      c.dispose();
+    }
+    notesController.dispose();
+    if (confirmed != true || !mounted) return;
+
+    final success = await provider.confirmDelivery(
+      order.id,
+      notes: notes,
+      receivedQuantities: quantities.isEmpty ? null : quantities,
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(success
+            ? 'Delivery accepted. Your stock has been updated.'
+            : (provider.error ?? 'Could not accept the delivery.')),
+        backgroundColor: success ? AppColors.success : AppColors.error,
+      ),
+    );
+    if (success) {
+      provider.loadOrder(order.id);
+    }
   }
 
   Widget _buildDeliveryConfirmation(Order order) {

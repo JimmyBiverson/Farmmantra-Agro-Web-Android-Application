@@ -5,7 +5,10 @@ import '../../../core/enums/app_enums.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/formatters.dart';
 import '../../../models/order.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/order_provider.dart';
+import '../../../services/api/api_service.dart';
+import '../../../services/print_service.dart';
 import '../../../providers/payment_provider.dart';
 import '../../../widgets/common/app_card.dart';
 import '../../../widgets/common/app_button.dart';
@@ -39,7 +42,21 @@ class _StaffOrderDetailScreenState extends State<StaffOrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Order Details')),
+      appBar: AppBar(
+        title: const Text('Order Details'),
+        actions: [
+          IconButton(
+            tooltip: 'Print order',
+            icon: const Icon(Icons.print_outlined),
+            onPressed: () => PrintService.open(
+              context,
+              context.read<ApiService>(),
+              'order',
+              widget.orderId,
+            ),
+          ),
+        ],
+      ),
       body: Consumer<OrderProvider>(
         builder: (context, provider, _) {
           if (provider.isLoading) {
@@ -72,6 +89,8 @@ class _StaffOrderDetailScreenState extends State<StaffOrderDetailScreen> {
                 _buildOrderTotal(order),
                 const SizedBox(height: 16),
                 _buildStatusTimeline(order),
+                const SizedBox(height: 16),
+                _buildTraceability(order),
                 const SizedBox(height: 16),
                 _buildActionSection(order, provider),
               ],
@@ -412,7 +431,71 @@ class _StaffOrderDetailScreenState extends State<StaffOrderDetailScreen> {
     );
   }
 
+  /// Payment terms, dispatch details and the digital signature numbers that
+  /// record exactly who confirmed, dispatched and received the order.
+  Widget _buildTraceability(Order order) {
+    final rows = <MapEntry<String, String>>[
+      MapEntry('Payment terms', order.isCashOrder ? 'Cash (pay before dispatch)' : 'Credit'),
+      if (order.dispatchMeansLabel != null)
+        MapEntry(
+          'Dispatched by',
+          '${order.dispatchMeansLabel}${order.dispatchVehicle != null && order.dispatchVehicle!.isNotEmpty ? ' · ${order.dispatchVehicle}' : ''}',
+        ),
+      if (order.dispatchRemarks != null && order.dispatchRemarks!.isNotEmpty)
+        MapEntry('Dispatch remarks', order.dispatchRemarks!),
+      if (order.approvalSignature != null) MapEntry('Approval signature', order.approvalSignature!),
+      if (order.dispatchSignature != null) MapEntry('Dispatch signature', order.dispatchSignature!),
+      if (order.deliverySignature != null) MapEntry('Receipt signature', order.deliverySignature!),
+    ];
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Traceability',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ...rows.map((r) => _buildDetailRow(r.key, r.value)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool get _canManage =>
+      Provider.of<AuthProvider>(context, listen: false).userRole?.canManageOrders ??
+      false;
+
+  Widget _buildMonitoringInfo(Order order) {
+    return AppCard(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const Icon(Icons.visibility_outlined, color: AppColors.info),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'Monitoring only. Orders are accepted and dispatched by the '
+                'Warehouse. Raise a support ticket if something needs attention.',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildActionSection(Order order, OrderProvider provider) {
+    if (!_canManage &&
+        (order.statusEnum == OrderStatus.pending ||
+            order.statusEnum == OrderStatus.approved)) {
+      return _buildMonitoringInfo(order);
+    }
     switch (order.statusEnum) {
       case OrderStatus.pending:
         return _buildPendingActions(order, provider);
@@ -433,7 +516,8 @@ class _StaffOrderDetailScreenState extends State<StaffOrderDetailScreen> {
     }
 
     final isOutForDelivery = order.isOutForDelivery;
-    final canDispatch = order.financeApproved;
+    // Credit orders ship on account; cash orders need an accepted payment.
+    final canDispatch = order.canBeDispatched;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -515,8 +599,11 @@ class _StaffOrderDetailScreenState extends State<StaffOrderDetailScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Finance has accepted and approved the payment for this order. '
-              'You can now dispatch the order for delivery.',
+              order.isCashOrder
+                  ? 'Finance has accepted the payment for this cash order. '
+                        'You can now dispatch it.'
+                  : 'Credit order — it can be dispatched now. Record how it '
+                        'is sent (truck, bus, …).',
               style: Theme.of(
                 context,
               ).textTheme.bodyMedium?.copyWith(color: AppColors.textSecondary),
@@ -554,7 +641,7 @@ class _StaffOrderDetailScreenState extends State<StaffOrderDetailScreen> {
                 const Icon(Icons.hourglass_top, color: AppColors.warning),
                 const SizedBox(width: 8),
                 Text(
-                  'Awaiting Finance Approval',
+                  'Cash order — awaiting payment',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: AppColors.warning,
@@ -676,35 +763,76 @@ class _StaffOrderDetailScreenState extends State<StaffOrderDetailScreen> {
   }
 
   Future<void> _confirmAndDispatch(Order order, OrderProvider provider) async {
+    String means = 'truck';
+    final vehicleController = TextEditingController();
+    final remarksController = TextEditingController();
+
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Dispatch Order'),
-        content: Text(
-          'Mark order ${order.displayOrderNumber} as Out for Delivery?',
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Dispatch Order'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('How is order ${order.displayOrderNumber} being sent?'),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: means,
+                  decoration: const InputDecoration(labelText: 'Dispatched by'),
+                  items: Order.dispatchMeansLabels.entries
+                      .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
+                      .toList(),
+                  onChanged: (v) => setDialogState(() => means = v ?? 'truck'),
+                ),
+                const SizedBox(height: 12),
+                AppTextField(
+                  controller: vehicleController,
+                  label: 'Vehicle / bus company / reg. no.',
+                ),
+                const SizedBox(height: 12),
+                AppTextField(
+                  controller: remarksController,
+                  label: 'Remarks',
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            AppButton(
+              label: 'Cancel',
+              onPressed: () => Navigator.pop(context, false),
+              isOutlined: true,
+            ),
+            AppButton(
+              label: 'Dispatch',
+              onPressed: () => Navigator.pop(context, true),
+              backgroundColor: AppColors.info,
+            ),
+          ],
         ),
-        actions: [
-          AppButton(
-            label: 'Cancel',
-            onPressed: () => Navigator.pop(context, false),
-            isOutlined: true,
-          ),
-          AppButton(
-            label: 'Dispatch',
-            onPressed: () => Navigator.pop(context, true),
-            backgroundColor: AppColors.info,
-          ),
-        ],
       ),
     );
+    final vehicle = vehicleController.text.trim();
+    final remarks = remarksController.text.trim();
+    vehicleController.dispose();
+    remarksController.dispose();
     if (confirmed != true || !mounted) return;
 
-    final success = await provider.dispatchOrder(order.id);
+    final success = await provider.dispatchOrder(
+      order.id,
+      means: means,
+      vehicle: vehicle,
+      remarks: remarks,
+    );
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          success ? 'Order dispatched' : 'Failed to dispatch order',
+          success ? 'Order dispatched' : (provider.error ?? 'Failed to dispatch order'),
         ),
         backgroundColor: success ? AppColors.success : AppColors.error,
       ),

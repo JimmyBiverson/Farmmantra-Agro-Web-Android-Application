@@ -12,6 +12,8 @@ import 'screens/finance/finance_shell.dart';
 import 'screens/finance/payments/payment_detail_screen.dart';
 import 'screens/franchise/orders/order_detail_screen.dart';
 import 'screens/staff/orders/staff_order_detail_screen.dart';
+import 'screens/shared/terms/terms_screen.dart';
+import 'screens/franchise/statement/statement_screen.dart';
 import 'services/notification_service.dart';
 
 class FarmmantraApp extends StatelessWidget {
@@ -44,7 +46,11 @@ class FarmmantraApp extends StatelessWidget {
               builder: (_) => _requireAuth(
                 context,
                 const StaffShell(),
-                allowedRoles: [UserRole.farmmantraStaff],
+                allowedRoles: const [
+                  UserRole.farmmantraStaff,
+                  UserRole.warehouse,
+                  UserRole.systemAdministrator,
+                ],
               ),
             );
           case '/finance/dashboard':
@@ -73,6 +79,22 @@ class FarmmantraApp extends StatelessWidget {
                 allowedRoles: [UserRole.franchisePartner],
               ),
             );
+          case '/terms':
+            return MaterialPageRoute(
+              builder: (_) => _requireAuth(
+                context,
+                const TermsScreen(),
+                allowedRoles: [UserRole.franchisePartner],
+              ),
+            );
+          case '/franchise/statement':
+            return MaterialPageRoute(
+              builder: (_) => _requireAuth(
+                context,
+                const StatementScreen(),
+                allowedRoles: [UserRole.franchisePartner],
+              ),
+            );
           case '/franchise/payment':
             return MaterialPageRoute(
               builder: (_) => _requireAuth(
@@ -88,7 +110,11 @@ class FarmmantraApp extends StatelessWidget {
               builder: (_) => _requireAuth(
                 context,
                 StaffOrderDetailScreen(orderId: orderId ?? ''),
-                allowedRoles: [UserRole.farmmantraStaff],
+                allowedRoles: const [
+                  UserRole.farmmantraStaff,
+                  UserRole.warehouse,
+                  UserRole.systemAdministrator,
+                ],
               ),
             );
           default:
@@ -111,6 +137,11 @@ class FarmmantraApp extends StatelessWidget {
 
     if (allowedRoles != null && !allowedRoles.contains(auth.userRole)) {
       return const LoginScreen();
+    }
+
+    // First login: franchise partners must accept the terms & conditions.
+    if (auth.user?.needsTermsAcceptance == true && child is! TermsScreen) {
+      return const TermsScreen();
     }
 
     return child;

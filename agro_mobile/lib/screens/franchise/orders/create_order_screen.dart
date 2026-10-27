@@ -23,6 +23,10 @@ class CreateOrderScreen extends StatefulWidget {
 class _CreateOrderScreenState extends State<CreateOrderScreen> {
   bool _isSubmitting = false;
 
+  /// 'credit' = pay later within the credit limit; 'cash' = pay (mobile
+  /// money / bank) before the warehouse dispatches.
+  String _paymentTerms = 'credit';
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -278,6 +282,27 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Text(
+                      'Payment:',
+                      style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Credit'),
+                      selected: _paymentTerms == 'credit',
+                      onSelected: (_) => setState(() => _paymentTerms = 'credit'),
+                    ),
+                    const SizedBox(width: 8),
+                    ChoiceChip(
+                      label: const Text('Cash'),
+                      selected: _paymentTerms == 'cash',
+                      onSelected: (_) => setState(() => _paymentTerms = 'cash'),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 12),
                 SizedBox(
                   width: double.infinity,
@@ -321,6 +346,7 @@ class _CreateOrderScreenState extends State<CreateOrderScreen> {
       final success = await provider.createOrder({
         'items': items,
         'total_amount': totalAmount,
+        'payment_terms': _paymentTerms,
       });
       if (!mounted) return;
 

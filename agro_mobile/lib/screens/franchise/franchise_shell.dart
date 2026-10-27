@@ -17,6 +17,9 @@ import '../franchise/inventory/inventory_screen.dart';
 import '../franchise/payments/payment_screen.dart';
 import '../franchise/customers/customer_list_screen.dart';
 import '../franchise/sales/create_sale_screen.dart';
+import '../../services/api/api_service.dart';
+import '../../services/print_service.dart';
+import '../shared/terms/terms_screen.dart';
 import '../shared/notifications/notification_screen.dart';
 import '../../widgets/common/logout_dialog.dart';
 import '../shared/profile/profile_screen.dart';
@@ -514,6 +517,32 @@ class _MoreTab extends StatelessWidget {
                 ),
               );
             },
+          ),
+          _buildMenuItem(
+            context,
+            Icons.receipt_long_outlined,
+            'Account Statement',
+            () => Navigator.of(context).pushNamed('/franchise/statement'),
+          ),
+          _buildMenuItem(
+            context,
+            Icons.print_outlined,
+            'Print My Stock Report',
+            () => PrintService.open(
+              context,
+              context.read<ApiService>(),
+              'stock-report',
+              context.read<AuthProvider>().user?.franchiseId ?? '0',
+              query: const {'scope': 'franchise'},
+            ),
+          ),
+          _buildMenuItem(
+            context,
+            Icons.description_outlined,
+            'Terms & Conditions',
+            () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const TermsScreen(readOnly: true)),
+            ),
           ),
           _buildMenuItem(
             context,

@@ -155,13 +155,21 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> confirmDelivery(String id, {String? notes}) async {
+  Future<bool> confirmDelivery(
+    String id, {
+    String? notes,
+    Map<String, double>? receivedQuantities,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final updated = await _apiService.confirmDelivery(id, notes: notes);
+      final updated = await _apiService.confirmDelivery(
+        id,
+        notes: notes,
+        receivedQuantities: receivedQuantities,
+      );
       _replaceOrder(updated);
       if (_selectedOrder?.id == id) _selectedOrder = updated;
       _isLoading = false;
@@ -175,13 +183,23 @@ class OrderProvider extends ChangeNotifier {
     }
   }
 
-  Future<bool> dispatchOrder(String id) async {
+  Future<bool> dispatchOrder(
+    String id, {
+    String means = 'truck',
+    String? vehicle,
+    String? remarks,
+  }) async {
     _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      final updated = await _apiService.dispatchOrder(id);
+      final updated = await _apiService.dispatchOrder(
+        id,
+        means: means,
+        vehicle: vehicle,
+        remarks: remarks,
+      );
       _replaceOrder(updated);
       if (_selectedOrder?.id == id) _selectedOrder = updated;
       _isLoading = false;

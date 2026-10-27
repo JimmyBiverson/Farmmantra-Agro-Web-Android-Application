@@ -15,6 +15,9 @@ import 'staff_dashboard.dart';
 import '../staff/orders/staff_order_list_screen.dart';
 import '../staff/inventory/staff_inventory_screen.dart';
 import '../shared/notifications/notification_screen.dart';
+import '../shared/support/chat_screen.dart';
+import '../../services/api/api_service.dart';
+import '../../services/print_service.dart';
 import '../../widgets/common/exit_dialog.dart';
 
 class StaffShell extends StatefulWidget {
@@ -343,6 +346,26 @@ class _StaffProfileTab extends StatelessWidget {
             Icons.lock_outline,
             'Change Password',
             () => _showChangePasswordDialog(context),
+          ),
+          _buildMenuItem(
+            context,
+            Icons.confirmation_number_outlined,
+            'Support Tickets & Chat',
+            () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const ChatScreen()),
+            ),
+          ),
+          _buildMenuItem(
+            context,
+            Icons.print_outlined,
+            'Print Company Stock Report',
+            () => PrintService.open(
+              context,
+              context.read<ApiService>(),
+              'stock-report',
+              '0',
+              query: const {'scope': 'company'},
+            ),
           ),
           _buildMenuItem(
             context,

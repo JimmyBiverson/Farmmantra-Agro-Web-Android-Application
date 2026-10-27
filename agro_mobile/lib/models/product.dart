@@ -52,6 +52,11 @@ class Product {
   final double taxRate;
   final double basePrice;
   final double finalPrice;
+
+  /// Admin-fixed selling prices. Franchises buy at [standardPrice] and may
+  /// only sell at one of these two prices.
+  final double retailPrice;
+  final double farmerPrice;
   final List<PriceSlab> priceSlabs;
   final String? imageUrl;
   final List<String> imageUrls;
@@ -72,6 +77,8 @@ class Product {
     this.taxRate = 0,
     this.basePrice = 0,
     this.finalPrice = 0,
+    this.retailPrice = 0,
+    this.farmerPrice = 0,
     this.priceSlabs = const [],
     this.imageUrl,
     this.imageUrls = const [],
@@ -139,6 +146,8 @@ class Product {
       taxRate: _toDouble(json['tax_rate']),
       basePrice: _toDouble(json['base_price'] ?? json['standard_price']),
       finalPrice: _toDouble(json['final_price'] ?? json['effective_price'] ?? json['standard_price']),
+      retailPrice: _toDouble(json['retail_price'] ?? json['selling_price'] ?? json['standard_price']),
+      farmerPrice: _toDouble(json['farmer_unit_price'] ?? json['farmer_price'] ?? json['retail_price'] ?? json['selling_price'] ?? json['standard_price']),
       priceSlabs: (json['price_slabs'] as List<dynamic>?)
               ?.map((s) => PriceSlab.fromJson(s))
               .toList() ??
@@ -167,6 +176,12 @@ class Product {
       }
     }
     return applicable;
+  }
+
+  /// Selling price for a customer type ('retailer' or 'farmer').
+  double sellingPriceFor(String customerType) {
+    final price = customerType == 'retailer' ? retailPrice : farmerPrice;
+    return price > 0 ? price : standardPrice;
   }
 
   double getPriceForQuantity(int quantity) {

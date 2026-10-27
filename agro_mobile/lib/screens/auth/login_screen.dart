@@ -90,9 +90,12 @@ class _LoginScreenState extends State<LoginScreen>
     String route;
     switch (role) {
       case UserRole.franchisePartner:
-        route = '/franchise/dashboard';
+        route = auth.user?.needsTermsAcceptance == true
+            ? '/terms'
+            : '/franchise/dashboard';
         break;
       case UserRole.farmmantraStaff:
+      case UserRole.warehouse:
       case UserRole.systemAdministrator:
         route = '/staff/dashboard';
         break;

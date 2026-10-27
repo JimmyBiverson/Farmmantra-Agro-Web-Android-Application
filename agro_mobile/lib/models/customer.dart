@@ -7,6 +7,10 @@ class Customer {
   final String? notes;
   final DateTime createdAt;
 
+  /// 'retailer' or 'farmer' — decides which admin-fixed price applies.
+  final String customerType;
+  final String? districtName;
+
   const Customer({
     required this.id,
     required this.name,
@@ -15,7 +19,13 @@ class Customer {
     this.location,
     this.notes,
     required this.createdAt,
+    this.customerType = 'farmer',
+    this.districtName,
   });
+
+  bool get isRetailer => customerType == 'retailer';
+
+  String get typeLabel => isRetailer ? 'Retailer' : 'Farmer';
 
   factory Customer.fromJson(Map<String, dynamic> json) {
     return Customer(
@@ -27,6 +37,8 @@ class Customer {
       notes: json['notes'],
       createdAt:
           DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
+      customerType: json['customer_type']?.toString() ?? 'farmer',
+      districtName: json['district_name']?.toString(),
     );
   }
 
@@ -37,6 +49,7 @@ class Customer {
       'email': email,
       'location': location,
       'notes': notes,
+      'customer_type': customerType,
     };
   }
 }

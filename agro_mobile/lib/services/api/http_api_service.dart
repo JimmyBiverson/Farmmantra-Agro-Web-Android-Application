@@ -59,6 +59,12 @@ class HttpApiService implements ApiService {
     if (_token != null) 'Authorization': 'Bearer $_token',
   };
 
+  /// Sales staff, warehouse and admin all use the /staff endpoints.
+  bool get _usesStaffEndpoints =>
+      _userRole == 'farmmantraStaff' ||
+      _userRole == 'warehouse' ||
+      _userRole == 'systemAdministrator';
+
   Future<Map<String, dynamic>> _get(
     String path, {
     Map<String, String>? queryParams,
@@ -319,6 +325,8 @@ class HttpApiService implements ApiService {
       'notification_preferences': user['notification_preferences'] is Map
           ? user['notification_preferences']
           : const <String, dynamic>{},
+      'needs_terms_acceptance': user['needs_terms_acceptance'] == true,
+      'franchise_region': user['franchise_region'],
     };
   }
 
@@ -332,6 +340,8 @@ class HttpApiService implements ApiService {
         return 'financeDepartment';
       case 'Franchise Partner':
         return 'franchisePartner';
+      case 'Warehouse':
+        return 'warehouse';
       default:
         return 'franchisePartner';
     }
@@ -468,6 +478,16 @@ class HttpApiService implements ApiService {
       finalPrice: Formatters.toDouble(
         p['final_price'] ?? p['effective_price'] ?? p['standard_price'],
       ),
+      retailPrice: Formatters.toDouble(
+        p['retail_price'] ?? p['selling_price'] ?? p['standard_price'],
+      ),
+      farmerPrice: Formatters.toDouble(
+        p['farmer_unit_price'] ??
+            p['farmer_price'] ??
+            p['retail_price'] ??
+            p['selling_price'] ??
+            p['standard_price'],
+      ),
       priceSlabs: slabs,
       imageUrl: mainImg.isNotEmpty
           ? mainImg
@@ -515,7 +535,7 @@ class HttpApiService implements ApiService {
     if (deliveryStatus != null) params['delivery_status'] = deliveryStatus;
 
     String endpoint;
-    if (_userRole == 'farmmantraStaff') {
+    if (_usesStaffEndpoints) {
       endpoint = '/staff/orders';
     } else {
       endpoint = '/franchise/orders';
@@ -629,6 +649,16 @@ class HttpApiService implements ApiService {
       paymentVerifiedCount: financeApproved
           ? 1
           : Formatters.toInt(o['payment_accepted_count'] ?? 0),
+      paymentTerms: o['payment_terms']?.toString() ?? 'credit',
+      amountPaid: Formatters.toDouble(o['amount_paid']),
+      dispatchMeans: o['dispatch_means']?.toString(),
+      dispatchVehicle: o['dispatch_vehicle']?.toString(),
+      dispatchRemarks: o['dispatch_remarks']?.toString(),
+      dispatchedAt: _parseDate(o['dispatched_at']),
+      approvalSignature: o['approval_signature']?.toString(),
+      dispatchSignature: o['dispatch_signature']?.toString(),
+      deliverySignature: o['delivery_signature']?.toString(),
+      receiptLines: ReceiptLine.listFrom(o['stock_receipt']),
     );
   }
 
@@ -694,54 +724,45 @@ class HttpApiService implements ApiService {
   }
 
   @override
-  Future<Order> confirmDelivery(String id, {String? notes}) async {
-    // This calls the stock receipt confirm endpoint
-    // First, get the order to find the stock receipt
-    final orderResponse = await _get('/franchise/stock-receipts');
-    final receipts = _extractList(orderResponse);
-
-    // Find receipt for this order
-    String? receiptId;
-    for (final r in receipts) {
-      if (r['order_id']?.toString() == id) {
-        receiptId = r['id']?.toString();
-        break;
-      }
+  Future<Order> confirmDelivery(
+    String id, {
+    String? notes,
+    Map<String, double>? receivedQuantities,
+  }) async {
+    // The franchise accepts the delivered order: received quantities per
+    // stock-receipt line (defaults to everything dispatched) plus explicit
+    // acceptance of the terms & conditions. The server signs the receipt.
+    final body = <String, dynamic>{'accept_terms': true};
+    if (notes != null && notes.isNotEmpty) body['notes'] = notes;
+    if (receivedQuantities != null && receivedQuantities.isNotEmpty) {
+      body['items'] = receivedQuantities.entries
+          .map(
+            (e) => {
+              'stock_receipt_item_id': e.key,
+              'received_quantity': e.value,
+            },
+          )
+          .toList();
     }
 
-    if (receiptId == null) {
-      throw AppException(
-        message: 'No stock receipt found for this order.',
-        code: 'NOT_FOUND',
-      );
-    }
-
-    // Get receipt details to find items
-    final receiptDetail = await _get('/franchise/stock-receipts/$receiptId');
-    final receipt = _extractOne(receiptDetail);
-    final receiptItems = receipt['items'] as List<dynamic>? ?? [];
-
-    final items = receiptItems
-        .map(
-          (item) => {
-            'stock_receipt_item_id': item['id'],
-            'received_quantity':
-                item['ordered_quantity'] ?? item['quantity'] ?? 0,
-          },
-        )
-        .toList();
-
-    await _post(
-      '/franchise/stock-receipts/$receiptId/confirm',
-      body: {'items': items, 'notes': notes},
+    final response = await _post(
+      '/franchise/orders/$id/confirm-delivery',
+      body: body,
     );
-
-    return getOrder(id);
+    return _normalizeOrder(_extractOne(response));
   }
 
   @override
-  Future<Order> dispatchOrder(String id) async {
-    final response = await _post('/staff/orders/$id/dispatch');
+  Future<Order> dispatchOrder(
+    String id, {
+    String means = 'truck',
+    String? vehicle,
+    String? remarks,
+  }) async {
+    final body = <String, dynamic>{'dispatch_means': means};
+    if (vehicle != null && vehicle.isNotEmpty) body['dispatch_vehicle'] = vehicle;
+    if (remarks != null && remarks.isNotEmpty) body['dispatch_remarks'] = remarks;
+    final response = await _post('/staff/orders/$id/dispatch', body: body);
     return _normalizeOrder(_extractOne(response));
   }
 
@@ -766,7 +787,7 @@ class HttpApiService implements ApiService {
 
   @override
   Future<List<InventoryItem>> getInventory({String? franchiseId}) async {
-    if (_userRole == 'farmmantraStaff') {
+    if (_usesStaffEndpoints) {
       final List<InventoryItem> items = [];
       try {
         final warehouseRes = await _get('/staff/warehouse-stock');
@@ -937,6 +958,8 @@ class HttpApiService implements ApiService {
             'location': c['address'],
             'notes': null,
             'created_at': c['created_at'],
+            'customer_type': c['customer_type'],
+            'district_name': c['district'] is Map ? c['district']['name'] : null,
           }),
         )
         .toList();
@@ -954,6 +977,8 @@ class HttpApiService implements ApiService {
       'location': c['address'],
       'notes': null,
       'created_at': c['created_at'],
+      'customer_type': c['customer_type'],
+      'district_name': c['district'] is Map ? c['district']['name'] : null,
     });
   }
 
@@ -969,6 +994,8 @@ class HttpApiService implements ApiService {
       'location': c['address'],
       'notes': null,
       'created_at': c['created_at'],
+      'customer_type': c['customer_type'],
+      'district_name': c['district'] is Map ? c['district']['name'] : null,
     });
   }
 
@@ -1227,6 +1254,9 @@ class HttpApiService implements ApiService {
         'credit_limit': summary['credit_limit'] ?? 0,
         'low_stock_items': summary['low_stock_items'] ?? 0,
         'sales_by_category': data['sales_by_category'] ?? [],
+        'profit_this_month': summary['profit_this_month'] ?? 0,
+        'sales_count_this_month': summary['sales_count_this_month'] ?? 0,
+        'awaiting_acceptance': summary['awaiting_acceptance'] ?? 0,
       };
     } catch (_) {
       return {
@@ -1407,5 +1437,59 @@ class HttpApiService implements ApiService {
     } catch (_) {
       return 0;
     }
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // TERMS, STATEMENTS, DISTRICTS, PRINTING (client update Oct 2026)
+  // ══════════════════════════════════════════════════════════════
+
+  @override
+  Future<Map<String, dynamic>> getTerms() async {
+    final response = await _get('/terms');
+    return _extractOne(response);
+  }
+
+  @override
+  Future<void> acceptTerms() async {
+    await _post('/terms/accept', body: {'accept': true});
+  }
+
+  @override
+  Future<Map<String, dynamic>> getAccountStatement({
+    String? from,
+    String? to,
+  }) async {
+    final params = <String, String>{};
+    if (from != null) params['from'] = from;
+    if (to != null) params['to'] = to;
+    final response = await _get(
+      '/franchise/statement',
+      queryParams: params.isNotEmpty ? params : null,
+    );
+    return _extractOne(response);
+  }
+
+  @override
+  Future<List<Map<String, dynamic>>> getDistricts() async {
+    final response = await _get('/franchise/districts');
+    return _extractList(response)
+        .whereType<Map>()
+        .map((d) => Map<String, dynamic>.from(d))
+        .toList();
+  }
+
+  @override
+  Future<String> getPrintLink(
+    String type,
+    String id, {
+    Map<String, String>? query,
+  }) async {
+    final response = await _get('/print-links/$type/$id', queryParams: query);
+    final data = _extractOne(response);
+    final url = data['url']?.toString() ?? '';
+    if (url.isEmpty) {
+      throw AppException(message: 'Could not create the print link.', code: 'HTTP_ERROR');
+    }
+    return url;
   }
 }

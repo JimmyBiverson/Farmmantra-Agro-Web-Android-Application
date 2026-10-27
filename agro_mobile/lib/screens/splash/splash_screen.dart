@@ -84,8 +84,11 @@ class _SplashScreenState extends State<SplashScreen>
   String _getRouteForRole(AuthProvider auth) {
     switch (auth.userRole) {
       case UserRole.franchisePartner:
-        return '/franchise/dashboard';
+        return auth.user?.needsTermsAcceptance == true
+            ? '/terms'
+            : '/franchise/dashboard';
       case UserRole.farmmantraStaff:
+      case UserRole.warehouse:
         return '/staff/dashboard';
       case UserRole.financeDepartment:
         return '/finance/dashboard';

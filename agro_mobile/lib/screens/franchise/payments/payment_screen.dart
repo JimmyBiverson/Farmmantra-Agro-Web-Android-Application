@@ -49,11 +49,11 @@ class _PaymentScreenState extends State<PaymentScreen>
     'Other',
   ];
 
-  static const _methods = ['bank_transfer', 'mobile_money', 'cash'];
+  // Cash payments are made by mobile money or bank transfer (client rule).
+  static const _methods = ['mobile_money', 'bank_transfer'];
   static const _methodLabels = {
     'bank_transfer': 'Bank Transfer',
     'mobile_money': 'Mobile Money',
-    'cash': 'Cash',
   };
 
   @override
@@ -231,7 +231,9 @@ class _PaymentScreenState extends State<PaymentScreen>
                   .map((b) => DropdownMenuItem(value: b, child: Text(b)))
                   .toList(),
               onChanged: (v) => setState(() => _selectedBank = v),
-              validator: (v) => Validators.required(v, 'Bank name'),
+              validator: (v) => _selectedMethod == 'bank_transfer'
+                  ? Validators.required(v, 'Bank name')
+                  : null,
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(

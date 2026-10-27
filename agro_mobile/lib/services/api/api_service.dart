@@ -41,8 +41,19 @@ abstract class ApiService {
   Future<Order> approveOrder(String id, {String? deliveryDate, String? notes});
   Future<Order> declineOrder(String id, String reason);
   Future<Order> adjustOrder(String id, Map<String, dynamic> adjustments);
-  Future<Order> confirmDelivery(String id, {String? notes});
-  Future<Order> dispatchOrder(String id);
+  /// Franchise accepts a delivered order (implies accepting the T&C).
+  /// [receivedQuantities] maps stock-receipt line id → quantity received.
+  Future<Order> confirmDelivery(
+    String id, {
+    String? notes,
+    Map<String, double>? receivedQuantities,
+  });
+  Future<Order> dispatchOrder(
+    String id, {
+    String means = 'truck',
+    String? vehicle,
+    String? remarks,
+  });
   Future<Order> markOrderDelivered(String id);
   Future<Order> declineDelivery(String id, String reason);
 
@@ -98,4 +109,21 @@ abstract class ApiService {
   Future<void> markNotificationRead(String id);
   Future<void> markAllNotificationsRead();
   Future<int> getUnreadNotificationCount();
+
+  // Terms & conditions (franchise first login)
+  Future<Map<String, dynamic>> getTerms();
+  Future<void> acceptTerms();
+
+  // Franchise account statement (credit / debit / running balance)
+  Future<Map<String, dynamic>> getAccountStatement({String? from, String? to});
+
+  // Districts of the franchise's region (for registering customers)
+  Future<List<Map<String, dynamic>>> getDistricts();
+
+  /// Short-lived link to a printable document (opened in the browser).
+  Future<String> getPrintLink(
+    String type,
+    String id, {
+    Map<String, String>? query,
+  });
 }
