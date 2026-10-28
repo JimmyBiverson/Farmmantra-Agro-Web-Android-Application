@@ -11,6 +11,7 @@
     @else
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     @endif
+
     {{-- Dynamic OG Meta Tags --}}
     <meta property="og:title" content="@yield('title', 'Dashboard') - {{ $site['site_name'] ?? 'Farmmantra' }}">
     <meta property="og:site_name" content="{{ $site['site_name'] ?? 'Farmmantra' }}">
@@ -296,7 +297,27 @@
             .card-full .card-header { flex-wrap: wrap; gap: 0.5rem; }
             .card-stat { padding: 1rem; }
         }
-    </style>
+
+        @media (max-width: 1024px) {
+            .main-content { width: 100%; max-width: 100vw; min-width: 0; overflow-x: hidden; }
+            .topbar { width: 100%; max-width: 100vw; }
+            .sidebar { overflow: hidden; }
+            aside.sidebar.open { transform: translateX(0) !important; }
+            .sidebar nav { min-height: 0; flex-shrink: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: 1rem; }
+            .sidebar nav ul { flex-shrink: 0; }
+            main { min-width: 0; max-width: 100%; overflow-x: hidden; }
+            main > * { min-width: 0; max-width: 100%; }
+            .overflow-x-auto, .table-responsive { max-width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+            .overflow-x-auto::-webkit-scrollbar, .table-responsive::-webkit-scrollbar { height: 5px; }
+            .overflow-x-auto::-webkit-scrollbar-thumb, .table-responsive::-webkit-scrollbar-thumb { background: var(--accent); border-radius: 999px; }
+            .topbar [x-data*="open"] { position: relative; }
+            .topbar [x-data*="open"] > .absolute { width: min(13rem, calc(100vw - 1rem)); max-width: calc(100vw - 1rem); }
+        }
+        @media (max-width: 480px) {
+            .topbar { padding-left: 0.5rem; padding-right: 0.5rem; }
+            .topbar > div:last-child { min-width: 0; }
+        }
+</style>
     @yield('head')
 </head>
 <body class="h-full" x-data="{ sidebarOpen: false }">
@@ -305,7 +326,7 @@
     <div x-show="sidebarOpen" x-cloak class="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden transition-opacity" @click="sidebarOpen = false" x-transition:enter="transition ease-out duration-200" x-transition:leave="transition ease-in duration-150"></div>
 
     {{-- Sidebar --}}
-    <aside class="sidebar" :class="{ 'open': sidebarOpen }">
+    <aside class="sidebar" :class="{ 'open': sidebarOpen }" :style="sidebarOpen ? 'transform: translateX(0) !important' : ''">
         @include('partials.sidebar-nav')
     </aside>
 
@@ -472,11 +493,11 @@
                          class="absolute right-0 top-full mt-2 w-52 rounded-2xl border py-2 z-50"
                          style="background:var(--bg-card-solid); border-color:var(--border-color); box-shadow:var(--shadow-lg); backdrop-filter:var(--glass-blur)">
                         <a href="{{ route('web.profile') }}" class="flex items-center gap-3 px-4 py-2.5 text-sm transition" style="color:var(--text-primary)" onmouseover="this.style.background='var(--bg-input)'" onmouseout="this.style.background=''">
-                            <i class="fas fa-user text-xs w-4 text-center" style="color:var(--text-muted)"></i> <span class="hidden sm:inline">My Profile</span>
+                            <i class="fas fa-user text-xs w-4 text-center" style="color:var(--text-muted)"></i> <span class="">My Profile</span>
                         </a>
                         @if(auth()->user()->isAdmin())
                         <a href="{{ route('web.admin.settings.general') }}" class="flex items-center gap-3 px-4 py-2.5 text-sm transition" style="color:var(--text-primary)" onmouseover="this.style.background='var(--bg-input)'" onmouseout="this.style.background=''">
-                            <i class="fas fa-cog text-xs w-4 text-center" style="color:var(--text-muted)"></i> <span class="hidden sm:inline">Settings</span>
+                            <i class="fas fa-cog text-xs w-4 text-center" style="color:var(--text-muted)"></i> <span class="">Settings</span>
                         </a>
                         @endif
                         <hr class="my-1.5" style="border-color:var(--border-color)">
