@@ -42,7 +42,6 @@ This repository contains two main applications:
   <img src="./screenshots/dashboard.png" width="900" alt="Dashboard overview" /><br /><br />
   <img src="./screenshots/product_catalog.png" width="900" alt="Product catalog" /><br /><br />
   <img src="./screenshots/order_workflow.png" width="900" alt="Order workflow" /><br /><br />
-  <img src="./screenshots/payments_finance.png" width="900" alt="Payments and finance dashboard" /><br /><br />
   <img src="./screenshots/admin_panel.png" width="900" alt="Admin control panel" />
 </div>
 
