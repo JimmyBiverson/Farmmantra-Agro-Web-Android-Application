@@ -36,3 +36,4 @@ Web/bootstrap/cache/*.php
 **/*.apk
 **/*.aab
 **/*.hprof
+**/.kotlin/
