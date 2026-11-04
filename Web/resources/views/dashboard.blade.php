@@ -1,17 +1,9 @@
 @extends('layouts.app')
 @section('title', 'Dashboard')
 @section('page-title', 'Dashboard')
-
 @section('content')
-@php $role = auth()->user()->role?->name; @endphp
-
-@if($role === 'System Administrator')
-    @include('partials.admin-dashboard')
-@elseif(in_array($role, ['Farmmantra Staff', 'Warehouse']))
-    @include('partials.staff-dashboard')
-@elseif($role === 'Finance Department')
-    @include('partials.finance-dashboard')
-@elseif($role === 'Franchise Partner')
-    @include('partials.franchise-dashboard')
-@endif
+<div class="fm-live-status" id="fm-live-status" data-state="online" role="status"><span class="fm-live-dot"></span><span id="fm-live-label">Updated from your business records</span><button type="button" id="fm-refresh-dashboard">Refresh now</button></div>
+<div id="fm-dashboard-content" data-live-url="{{ route('web.dashboard.live') }}">
+    @include('partials.dashboard-content')
+</div>
 @endsection

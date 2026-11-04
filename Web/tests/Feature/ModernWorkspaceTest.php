@@ -15,7 +15,8 @@ class ModernWorkspaceTest extends TestCase
     public function test_login_keeps_branding_and_rejects_invalid_credentials(): void
     {
         $this->get('/')->assertRedirect('/dashboard');
-        $this->get('/login')->assertOk()->assertSee('Welcome back.');
+        $this->get('/login')->assertOk()->assertSee('Welcome back.')
+            ->assertDontSee('@vite', false)->assertSee('/build/assets/', false);
         $this->post('/login', ['email' => 'missing@example.com', 'password' => 'incorrect'])->assertSessionHasErrors('email');
     }
 

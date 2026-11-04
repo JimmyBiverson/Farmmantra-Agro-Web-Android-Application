@@ -106,21 +106,5 @@
     </div>
 </div>
 
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    @if(!empty($d['sales_by_category']) && count($d['sales_by_category']) > 0)
-    const isDark = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const textColor = isDark ? '#64748b' : '#94a3b8';
-    new Chart(document.getElementById('categoryChart'), {
-        type: 'doughnut',
-        data: {
-            labels: {!! json_encode($d['sales_by_category']->pluck('category_name')->toArray()) !!},
-            datasets: [{ data: {!! json_encode($d['sales_by_category']->pluck('total_sales')->toArray()) !!}, backgroundColor: ['#6366f1','#10b981','#f59e0b','#ef4444','#8b5cf6','#06b6d4'], borderWidth: 0, hoverOffset: 8 }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: textColor, padding: 12, boxWidth: 10, font: { size: 11 } } } } }
-    });
-    @endif
-});
-</script>
-@endpush
+
+

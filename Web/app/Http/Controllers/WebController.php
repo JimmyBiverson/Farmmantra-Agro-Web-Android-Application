@@ -148,8 +148,8 @@ class WebController extends Controller
             $dashboard['summary'] = [
                 'pending_payments_count' => PaymentSubmission::where('status', 'pending')->count(),
                 'pending_payments_total' => PaymentSubmission::where('status', 'pending')->sum('amount'),
-                'accepted_this_month' => PaymentSubmission::where('status', 'accepted')->whereMonth('accepted_at', $now->month)->count(),
-                'accepted_amount_this_month' => PaymentSubmission::where('status', 'accepted')->whereMonth('accepted_at', $now->month)->sum('verified_amount'),
+                'accepted_this_month' => PaymentSubmission::where('status', 'accepted')->whereMonth('accepted_at', $now->month)->whereYear('accepted_at', $now->year)->count(),
+                'accepted_amount_this_month' => PaymentSubmission::where('status', 'accepted')->whereMonth('accepted_at', $now->month)->whereYear('accepted_at', $now->year)->sum('verified_amount'),
                 'total_outstanding' => Franchise::where('account_balance', '>', 0)->sum('account_balance'),
                 'total_collected_ytd' => PaymentSubmission::where('status', 'accepted')->whereYear('accepted_at', $now->year)->sum('verified_amount'),
             ];
@@ -182,6 +182,10 @@ class WebController extends Controller
                 return ['target_id' => $target->id, 'category' => $target->productCategory?->name ?? 'All Products', 'target_amount' => $target->target_amount, 'actual_amount' => $actual, 'achievement_percentage' => $target->target_amount > 0 ? round(($actual / $target->target_amount) * 100, 1) : 0];
             });
             $dashboard['inventory_status'] = FranchiseInventory::where('franchise_id', $franchiseId)->with('product:id,name,sku,standard_price')->get()->map(fn ($item) => ['product_name' => $item->product?->name, 'sku' => $item->product?->sku, 'quantity' => $item->quantity, 'reorder_level' => $item->reorder_level, 'is_low_stock' => $item->quantity <= $item->reorder_level, 'value' => $item->quantity * ($item->product?->standard_price ?? 0)]);
+        }
+
+        if (request()->routeIs('web.dashboard.live')) {
+            return response()->json(['html' => view('partials.dashboard-content', compact('dashboard'))->render(), 'updated_at' => now()->toIso8601String()])->header('Cache-Control', 'private, no-store');
         }
 
         return view('dashboard', compact('dashboard'));
@@ -790,7 +794,7 @@ class WebController extends Controller
             : "MONTH({$column})";
         $data = [
             'total_collected_ytd' => PaymentSubmission::where('status', 'accepted')->whereYear('accepted_at', $now->year)->sum('verified_amount'),
-            'total_collected_month' => PaymentSubmission::where('status', 'accepted')->whereMonth('accepted_at', $now->month)->sum('verified_amount'),
+            'total_collected_month' => PaymentSubmission::where('status', 'accepted')->whereMonth('accepted_at', $now->month)->whereYear('accepted_at', $now->year)->sum('verified_amount'),
             'total_outstanding' => Franchise::where('account_balance', '>', 0)->sum('account_balance'),
             'monthly_collections' => PaymentSubmission::where('status', 'accepted')->select(DB::raw("{$monthSql('accepted_at')} as month"), DB::raw('SUM(verified_amount) as total'))->whereYear('accepted_at', $now->year)->groupBy(DB::raw($monthSql('accepted_at')))->orderBy('month')->get(),
             'monthly_reconciliation' => collect(),

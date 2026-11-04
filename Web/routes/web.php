@@ -198,6 +198,7 @@ Route::middleware(AuthenticateWeb::class)->group(function () {
 });
 
 Route::middleware(AuthenticateWeb::class)->group(function () {
+    Route::get('/dashboard/live', [WebController::class, 'dashboard'])->name('web.dashboard.live');
     Route::get('/notifications', [NotificationCenterController::class, 'index'])->name('web.notifications');
     Route::get('/notifications/feed', [NotificationCenterController::class, 'feed'])->name('web.notifications.feed');
     Route::post('/notifications/read-all', [NotificationCenterController::class, 'readAll'])->name('web.notifications.readAll');

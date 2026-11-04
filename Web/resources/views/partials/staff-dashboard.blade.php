@@ -92,21 +92,5 @@
     </div>
 </div>
 
-@push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    @if(!empty($d['orders_by_status']) && count($d['orders_by_status']) > 0)
-    const isDark = localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches);
-    const textColor = isDark ? '#64748b' : '#94a3b8';
-    new Chart(document.getElementById('staffOrderStatusChart'), {
-        type: 'doughnut',
-        data: {
-            labels: {!! json_encode($d['orders_by_status']->pluck('status')->toArray()) !!},
-            datasets: [{ data: {!! json_encode($d['orders_by_status']->pluck('count')->toArray()) !!}, backgroundColor: ['#f59e0b','#6366f1','#ef4444','#10b981'], borderWidth: 0, hoverOffset: 8 }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, cutout: '65%', plugins: { legend: { position: 'bottom', labels: { color: textColor, padding: 12, boxWidth: 10, font: { size: 11 } } } } }
-    });
-    @endif
-});
-</script>
-@endpush
+
+

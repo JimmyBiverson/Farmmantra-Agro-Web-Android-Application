@@ -54,7 +54,8 @@
     </div>
 
     <!-- Update Stock Modal -->
-    <div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="modal-overlay" style="display:none" @keydown.escape.window="open = false">
+    <template x-teleport="body">
+<div x-show="open" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="modal-overlay" style="display:none" @keydown.escape.window="open = false">
         <div class="modal-backdrop" @click="open = false"></div>
         <div class="modal-panel" @click.stop>
             <div class="flex items-center justify-between mb-5">
@@ -92,5 +93,7 @@
             </form>
         </div>
     </div>
+</template>
 </div>
 @endsection
+
