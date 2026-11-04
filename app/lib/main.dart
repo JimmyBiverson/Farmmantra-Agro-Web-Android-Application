@@ -25,19 +25,11 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  try {
-    await Firebase.initializeApp();
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-  } catch (error) {
-    debugPrint('Firebase is not configured: $error');
-  }
-
   final localStorage = LocalStorageService();
   await localStorage.initialize();
 
   final apiService = HttpApiService();
   await apiService.initialize();
-  await NotificationService().init(apiService: apiService);
 
   // Restore saved token if any
   final savedToken = localStorage.getToken();
@@ -79,4 +71,25 @@ void main() async {
       child: const FarmmantraApp(),
     ),
   );
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    try {
+      await Firebase.initializeApp();
+      FirebaseMessaging.onBackgroundMessage(
+        _firebaseMessagingBackgroundHandler,
+      );
+    } catch (error) {
+      debugPrint('Firebase is not configured: $error');
+    }
+    try {
+      await NotificationService().init(apiService: apiService);
+      final context = NotificationService.navigatorKey.currentContext;
+      if (context != null &&
+          context.mounted &&
+          context.read<AuthProvider>().isAuthenticated) {
+        await NotificationService().registerAuthenticatedDevice();
+      }
+    } catch (error) {
+      debugPrint('Notifications unavailable: $error');
+    }
+  });
 }

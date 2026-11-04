@@ -1,3 +1,4 @@
+import 'package:farmmantra/core/constants/api_endpoints.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:farmmantra/core/utils/image_url.dart';
 
@@ -6,25 +7,25 @@ void main() {
     test('returns external URLs rewritten to base host for local dev', () {
       expect(
         resolveImageUrl('https://cdn.example.com/p.png'),
-        'http://10.0.2.2:8000/p.png',
+        '${Uri.parse(ApiEndpoints.baseUrl).origin}/p.png',
       );
       expect(
         resolveImageUrl('http://localhost/x.png'),
-        'http://10.0.2.2:8000/x.png',
+        '${Uri.parse(ApiEndpoints.baseUrl).origin}/x.png',
       );
     });
 
     test('builds full URL for relative storage paths', () {
       expect(
         resolveImageUrl('products/SEED-001.png'),
-        'http://10.0.2.2:8000/storage/products/SEED-001.png',
+        '${Uri.parse(ApiEndpoints.baseUrl).origin}/storage/products/SEED-001.png',
       );
     });
 
     test('preserves leading-slash paths', () {
       expect(
         resolveImageUrl('/storage/avatars/a.png'),
-        'http://10.0.2.2:8000/storage/avatars/a.png',
+        '${Uri.parse(ApiEndpoints.baseUrl).origin}/storage/avatars/a.png',
       );
     });
 

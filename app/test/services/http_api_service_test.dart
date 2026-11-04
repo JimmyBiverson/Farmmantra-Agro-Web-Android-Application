@@ -7,6 +7,19 @@ import 'package:farmmantra/core/exceptions/app_exception.dart';
 import 'package:farmmantra/services/api/http_api_service.dart';
 
 void main() {
+  test('dashboard network failure does not fabricate zero totals', () async {
+    final api = HttpApiService(
+      client: MockClient((request) async {
+        return http.Response(
+          '{"message":"Unavailable"}',
+          503,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+    api.setToken('test-token');
+    await expectLater(api.getDashboardStats(), throwsA(isA<AppException>()));
+  });
   group('HttpApiService.getOrders', () {
     test('parses paginated orders response without error', () async {
       final api = HttpApiService(

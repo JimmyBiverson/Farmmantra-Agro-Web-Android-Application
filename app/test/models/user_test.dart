@@ -1,3 +1,4 @@
+import 'package:farmmantra/core/constants/api_endpoints.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:farmmantra/models/user.dart';
 import 'package:farmmantra/core/enums/user_role.dart';
@@ -26,7 +27,7 @@ void main() {
       expect(user.role, UserRole.franchisePartner);
       expect(user.franchiseId, 'F001');
       expect(user.franchiseName, 'Kampala');
-      expect(user.avatarUrl, 'http://10.0.2.2:8000/a.png');
+      expect(user.avatarUrl, '${Uri.parse(ApiEndpoints.baseUrl).origin}/a.png');
       expect(user.createdAt, isNotNull);
       expect(user.isActive, true);
     });

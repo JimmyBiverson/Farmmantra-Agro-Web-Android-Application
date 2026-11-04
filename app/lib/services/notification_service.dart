@@ -56,13 +56,6 @@ class NotificationService {
     try {
       final messaging = FirebaseMessaging.instance;
       _messaging = messaging;
-      await messaging.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        criticalAlert: false,
-        provisional: false,
-      );
       await messaging.setForegroundNotificationPresentationOptions(
         alert: false,
         badge: false,
@@ -89,7 +82,7 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    await androidPlugin?.requestNotificationsPermission();
+
     await androidPlugin?.createNotificationChannel(
       const AndroidNotificationChannel(
         _notificationChannelId,
@@ -104,8 +97,15 @@ class NotificationService {
   }
 
   Future<void> registerAuthenticatedDevice() async {
+    if (!_initialized) return;
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.requestNotificationsPermission();
     final messaging = _messaging;
     if (messaging == null) return;
+    await messaging.requestPermission(alert: true, badge: true, sound: true);
     final token = await messaging.getToken();
     if (token != null) await _apiService?.updateDeviceToken(token);
   }

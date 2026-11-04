@@ -1256,6 +1256,7 @@ class HttpApiService implements ApiService {
         'total_sales_ytd': summary['total_sales_ytd'] ?? 0,
         'total_orders_pending': summary['pending_orders'] ?? 0,
         'inventory_value': summary['total_inventory_value'] ?? 0,
+        'inventory_items_count': summary['inventory_items_count'] ?? 0,
         'outstanding_balance': summary['outstanding_balance'] ?? 0,
         'credit_limit': summary['credit_limit'] ?? 0,
         'low_stock_items': summary['low_stock_items'] ?? 0,
@@ -1265,16 +1266,7 @@ class HttpApiService implements ApiService {
         'awaiting_acceptance': summary['awaiting_acceptance'] ?? 0,
       };
     } catch (_) {
-      return {
-        'total_sales_this_month': 0,
-        'total_sales_ytd': 0,
-        'total_orders_pending': 0,
-        'inventory_value': 0,
-        'outstanding_balance': 0,
-        'credit_limit': 0,
-        'low_stock_items': 0,
-        'sales_by_category': [],
-      };
+      rethrow;
     }
   }
 

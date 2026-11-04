@@ -95,3 +95,15 @@ Business assumptions to confirm before real transactions: franchise account is t
 - Android debug APK: ARM64 debug build succeeded after downloading the missing official Flutter engine artifact. The final ARM64 debug APK was successfully rebuilt with API_BASE_URL=http://192.168.1.67:8000/api/v1 for same-Wi-Fi phone testing. No phone/FCM delivery is claimed.
 
 
+
+## Interface refresh - 4 November 2026
+
+- Fixed the literal Blade @vite directive on login and rebuilt Vite assets. Added a farmland login background and a responsive form panel.
+- Shared web dialogs now teleport to the document body, center within the viewport, scroll internally, trap keyboard focus, and restore focus on close. Phone forms use one column with visible action controls. Shared tables scroll within their containers.
+- All web dashboard roles refresh their scoped database-backed content every 20 seconds, on notifications, and on manual refresh. Charts refresh with the same records. Failed refreshes keep the previous data with an explicit status. Live endpoint regression tests cover newly recorded sales and franchise isolation.
+- Flutter startup uses a restrained fade and initializes optional notification services after the first frame. Notification permission requests are deferred to authenticated registration. Login, dialogs, popup menus, and bottom sheets share refreshed styling.
+- Franchise dashboard summary totals now come from the server summary endpoint, refresh every 20 seconds while resumed, and support pull to refresh. Network failures preserve the last summary and display an error instead of fabricated zero totals.
+- Replaced the two old promotional mobile banners with one AI-generated farmland image, shared with web login. No product or price claims appear in this image. Asset paths: Web/public/images/farmmantra-fields.png and app/assets/images/farmmantra-fields.png. Generation prompt: photorealistic wide Ugandan green maize rows, distant tree line and hills, warm morning light, restrained emerald and olive colors, quiet left side for text; no text, logos, people, or chemical packaging.
+- Validation: Vite production build passed; Laravel 46 tests / 700 assertions passed; Flutter analyzer clean; Flutter 209 tests passed. API image URL tests now follow the configured endpoint rather than hardcode an emulator address.
+- Browser evidence: login-refresh.jpg, product-dialog-desktop.jpg, product-dialog-phone.jpg. Product dialog verified at 1440px and 390px widths, including Escape dismissal and focus restoration. Physical Android visual and notification delivery testing remains pending.
+- The current Android default endpoint is http://192.168.137.1:8000/api/v1 in app/lib/core/constants/api_endpoints.dart. This supersedes the earlier build address documented above. Firebase and SMS account configuration remains deferred at the user's request.

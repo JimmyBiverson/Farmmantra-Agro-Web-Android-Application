@@ -31,56 +31,37 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
   bool _isLoading = true;
   final PageController _pageController = PageController();
   int _currentBannerIndex = 0;
-  Timer? _autoScrollTimer;
+  Map<String, dynamic>? _summary;
+  String? _summaryError;
+  Timer? _summaryTimer;
+  bool _summaryLoading = false;
 
-  // Banner slides — images served from admin controlled URLs (can be overridden by API later)
-  // The admin updates slides via /admin/slides panel in the web dashboard
+  // Local brand imagery carries no stock, price or promotion claims.
   static const List<Map<String, dynamic>> _bannerSlides = [
     {
-      'image': 'assets/images/banner_1.png',
-      'tag': 'CROP PROTECTION',
-      'title': 'Authentic Agro Chemicals',
-      'subtitle': 'Herbicides, Fungicides & Insecticides',
-    },
-    {
-      'image': 'assets/images/banner_2.png',
-      'tag': 'BULK DISCOUNTS',
-      'title': 'Tier Pricing & Credit Terms',
-      'subtitle': 'Exclusive savings for franchise partners',
-    },
-    {
-      'image': null,
-      'tag': 'FAST DELIVERY',
-      'title': 'Countrywide Logistics',
-      'subtitle': 'Real-time tracking & inventory sync',
-      'color': 0xFF1565C0,
+      'image': 'assets/images/farmmantra-fields.png',
+      'tag': 'GROWING TOGETHER',
+      'title': 'Your growing business',
+      'subtitle': 'One connected Farmmantra workspace',
     },
   ];
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadData());
+    _summaryTimer = Timer.periodic(const Duration(seconds: 20), (_) {
+      if (mounted &&
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+        _refreshSummary();
+      }
+    });
   }
 
   @override
   void dispose() {
-    _autoScrollTimer?.cancel();
+    _summaryTimer?.cancel();
     _pageController.dispose();
     super.dispose();
-  }
-
-  void _startAutoScroll() {
-    _autoScrollTimer?.cancel();
-    _autoScrollTimer = Timer.periodic(const Duration(seconds: 4), (_) {
-      if (!mounted || !_pageController.hasClients) return;
-      final next = (_currentBannerIndex + 1) % _bannerSlides.length;
-      _pageController.animateToPage(
-        next,
-        duration: const Duration(milliseconds: 500),
-        curve: Curves.easeInOut,
-      );
-    });
   }
 
   Future<void> _loadData() async {
@@ -93,56 +74,83 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
         orderProvider.loadOrders(),
         invProvider.loadInventory(),
         productProvider.loadProducts(),
+        _refreshSummary(),
       ]);
     } catch (_) {}
 
     if (!mounted) return;
     setState(() => _isLoading = false);
-    _startAutoScroll();
+  }
+
+  Future<void> _refreshSummary() async {
+    if (_summaryLoading) return;
+    _summaryLoading = true;
+    try {
+      final summary = await context.read<ApiService>().getDashboardStats();
+      if (mounted) {
+        setState(() {
+          _summary = summary;
+          _summaryError = null;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(
+          () => _summaryError =
+              'Unable to refresh. Showing the last loaded figures.',
+        );
+      }
+    } finally {
+      _summaryLoading = false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: EdgeInsets.symmetric(
-        horizontal: Responsive.horizontalPadding(context),
-        vertical: 16,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildWelcomeHeader(),
-          const SizedBox(height: 16),
-          if (_isLoading)
-            const SizedBox(height: 200, child: Center(child: LoadingView()))
-          else ...[
-            const MonthSummaryCard(),
-            const SizedBox(height: 12),
-            _buildStatsGrid(context),
-            const SizedBox(height: 8),
-            SectionHeader(
-              title: 'Recent Orders',
-              actionLabel: 'View All',
-              onAction: () => FranchiseTabScope.of(context)?.onSwitchTab(1),
-            ),
-            _buildRecentOrders(),
-            const SizedBox(height: 8),
-            SectionHeader(
-              title: 'Featured Products',
-              actionLabel: 'See All',
-              onAction: () => FranchiseTabScope.of(context)?.onSwitchTab(2),
-            ),
-            _buildFeaturedProducts(),
-            const SizedBox(height: 8),
-            SectionHeader(
-              title: 'Inventory Alerts',
-              actionLabel: 'View All',
-              onAction: () => FranchiseTabScope.of(context)?.onSwitchTab(3),
-            ),
-            _buildInventoryAlerts(),
+    return RefreshIndicator(
+      onRefresh: _loadData,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: EdgeInsets.symmetric(
+          horizontal: Responsive.horizontalPadding(context),
+          vertical: 16,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildWelcomeHeader(),
+            const SizedBox(height: 16),
+            if (_isLoading)
+              const SizedBox(height: 200, child: Center(child: LoadingView()))
+            else ...[
+              MonthSummaryCard(stats: _summary, error: _summaryError),
+              const SizedBox(height: 12),
+              _buildStatsGrid(context),
+              const SizedBox(height: 8),
+              SectionHeader(
+                title: 'Recent Orders',
+                actionLabel: 'View All',
+                onAction: () => FranchiseTabScope.of(context)?.onSwitchTab(1),
+              ),
+              _buildRecentOrders(),
+              const SizedBox(height: 8),
+              SectionHeader(
+                title: 'Featured Products',
+                actionLabel: 'See All',
+                onAction: () => FranchiseTabScope.of(context)?.onSwitchTab(2),
+              ),
+              _buildFeaturedProducts(),
+              const SizedBox(height: 8),
+              SectionHeader(
+                title: 'Inventory Alerts',
+                actionLabel: 'View All',
+                onAction: () => FranchiseTabScope.of(context)?.onSwitchTab(3),
+              ),
+              _buildInventoryAlerts(),
+            ],
+            const SizedBox(height: 24),
           ],
-          const SizedBox(height: 24),
-        ],
+        ),
       ),
     );
   }
@@ -435,21 +443,14 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
   }
 
   Widget _buildStatsGrid(BuildContext context) {
-    final pendingCount = context
-        .read<OrderProvider>()
-        .orders
-        .where((o) => o.statusEnum.name == 'pending')
-        .length;
-    final inventory = context.read<InventoryProvider>().items;
-    final totalInventoryValue = inventory.fold(
-      0.0,
-      (sum, i) => sum + i.totalValue,
-    );
-
+    final pendingCount = _summary?['total_orders_pending'];
+    final totalInventoryValue = _summary?['inventory_value'];
+    final itemCount = _summary?['inventory_items_count'];
+    final lowCount = _summary?['low_stock_items'];
     final stats = [
       StatCard(
         title: 'Pending Orders',
-        value: '$pendingCount',
+        value: pendingCount?.toString() ?? '—',
         icon: Icons.shopping_cart_outlined,
         iconColor: AppColors.warning,
         subtitle: 'Tap to view',
@@ -457,7 +458,9 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
       ),
       StatCard(
         title: 'Inv. Value',
-        value: Formatters.currency(totalInventoryValue),
+        value: totalInventoryValue == null
+            ? '—'
+            : Formatters.currency(MonthSummaryCard._num(totalInventoryValue)),
         icon: Icons.inventory_2_outlined,
         iconColor: AppColors.info,
         subtitle: 'Tap for details',
@@ -465,7 +468,7 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
       ),
       StatCard(
         title: 'Total Items',
-        value: '${inventory.length}',
+        value: itemCount?.toString() ?? '—',
         icon: Icons.inventory,
         iconColor: AppColors.primaryGreen,
         subtitle: 'Tap to view',
@@ -473,8 +476,7 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
       ),
       StatCard(
         title: 'Low Stock',
-        value:
-            '${inventory.where((i) => i.isLowStock || i.isOutOfStock).length}',
+        value: lowCount?.toString() ?? '—',
         icon: Icons.warning_amber_outlined,
         iconColor: AppColors.error,
         subtitle: 'Tap for alerts',
@@ -492,7 +494,7 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
       crossAxisSpacing: 10,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.5,
+      mainAxisExtent: 144,
       children: stats,
     );
   }
@@ -854,27 +856,10 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
 
 /// This month at a glance (client request): sales, profit, number of sales,
 /// stock value, pending orders and deliveries waiting to be accepted.
-class MonthSummaryCard extends StatefulWidget {
-  const MonthSummaryCard({super.key});
-
-  @override
-  State<MonthSummaryCard> createState() => _MonthSummaryCardState();
-}
-
-class _MonthSummaryCardState extends State<MonthSummaryCard> {
-  Map<String, dynamic>? _stats;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    final stats = await context.read<ApiService>().getDashboardStats();
-    if (mounted) setState(() => _stats = stats);
-  }
-
+class MonthSummaryCard extends StatelessWidget {
+  final Map<String, dynamic>? stats;
+  final String? error;
+  const MonthSummaryCard({super.key, this.stats, this.error});
   static double _num(dynamic v) {
     if (v is num) return v.toDouble();
     if (v is String) return double.tryParse(v) ?? 0;
@@ -883,7 +868,7 @@ class _MonthSummaryCardState extends State<MonthSummaryCard> {
 
   @override
   Widget build(BuildContext context) {
-    final s = _stats;
+    final s = stats;
     Widget tile(String label, String value, IconData icon, Color color) =>
         SizedBox(
           width: 150,
@@ -943,7 +928,20 @@ class _MonthSummaryCardState extends State<MonthSummaryCard> {
             ],
           ),
           const SizedBox(height: 8),
-          if (s == null)
+          if (error != null)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Text(
+                error!,
+                style: const TextStyle(color: AppColors.warning, fontSize: 11),
+              ),
+            ),
+          if (s == null && error != null)
+            const Text(
+              'Business totals are unavailable. Pull to refresh.',
+              style: TextStyle(color: AppColors.textSecondary),
+            )
+          else if (s == null)
             const Padding(
               padding: EdgeInsets.all(12),
               child: Center(child: CircularProgressIndicator(strokeWidth: 2)),

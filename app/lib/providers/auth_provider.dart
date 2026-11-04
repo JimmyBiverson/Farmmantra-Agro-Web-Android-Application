@@ -42,6 +42,7 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> initialize() async {
+    final startup = Stopwatch()..start();
     _isInitialized = false;
     notifyListeners();
 
@@ -60,6 +61,10 @@ class AuthProvider extends ChangeNotifier {
       _syncRole(null);
       _user = null;
     } finally {
+      final remaining = 850 - startup.elapsedMilliseconds;
+      if (remaining > 0) {
+        await Future<void>.delayed(Duration(milliseconds: remaining));
+      }
       _isInitialized = true;
       notifyListeners();
     }
