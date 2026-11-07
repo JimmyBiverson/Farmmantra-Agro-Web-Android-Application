@@ -10,6 +10,7 @@ class Product extends Model
     use HasFactory;
 
     protected $fillable = [
+        'batch_number', 'manufactured_at', 'expires_at', 'active_ingredient',
         'name', 'sku', 'category_id', 'unit_of_measure',
         'packaging_details', 'description', 'selling_price', 'farmer_price',
         'standard_price', 'image', 'is_active',

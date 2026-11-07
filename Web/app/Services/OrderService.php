@@ -43,6 +43,7 @@ class OrderService
                 'franchise_id' => $user->franchise_id,
                 'ordered_by' => $user->id,
                 'status' => 'pending',
+                'review_stage' => 'sales_head',
                 'delivery_status' => 'pending',
                 'payment_terms' => $paymentTerms,
                 'notes' => $notes,
@@ -123,6 +124,7 @@ class OrderService
     public static function approve(Order $order, User $actor, string $expectedDeliveryDate, ?string $notes = null): Order
     {
         self::assertCanManage($actor);
+        ReviewService::assertWarehouseReady($order);
 
         if ($order->status !== 'pending') {
             throw ValidationException::withMessages(['order' => 'Order is not pending.']);
@@ -141,6 +143,7 @@ class OrderService
             if ($order->status !== 'pending') {
                 throw ValidationException::withMessages(['order' => 'Order is not pending.']);
             }
+            ReviewService::assertWarehouseReady($order);
 
             foreach ($order->items as $item) {
                 // An adjusted quantity replaces the originally requested quantity.
@@ -166,6 +169,7 @@ class OrderService
 
             $order->update([
                 'status' => 'approved',
+                'review_stage' => $order->review_stage ? 'accepted' : null,
                 'approved_by' => $actor->id,
                 'approved_at' => now(),
                 'approval_signature' => $signature->signature_number,
@@ -221,6 +225,7 @@ class OrderService
     public static function decline(Order $order, User $actor, string $reason): Order
     {
         self::assertCanManage($actor);
+        ReviewService::assertWarehouseReady($order);
 
         if ($order->status !== 'pending') {
             throw ValidationException::withMessages(['order' => 'Order is not pending.']);

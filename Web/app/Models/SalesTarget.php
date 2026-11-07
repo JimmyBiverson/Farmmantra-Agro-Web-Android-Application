@@ -10,6 +10,7 @@ class SalesTarget extends Model
     use HasFactory;
 
     protected $fillable = [
+        'user_id', 'product_id', 'period', 'starts_on', 'ends_on',
         'franchise_id', 'product_category_id',
         'target_amount', 'target_quantity',
         'month', 'year',

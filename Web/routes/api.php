@@ -15,6 +15,11 @@ use App\Http\Controllers\Api\FranchiseSalesController;
 use App\Http\Controllers\Api\MasterDataController;
 use App\Http\Controllers\Api\NewsController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\Operations\ExportController;
+use App\Http\Controllers\Api\Operations\KnowledgeController;
+use App\Http\Controllers\Api\Operations\RequestController;
+use App\Http\Controllers\Api\Operations\ReturnController;
+use App\Http\Controllers\Api\Operations\WorkspaceController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SettingsController;
@@ -145,7 +150,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Sales staff can view everything here; only the Warehouse role (and
     // admin) can accept, decline, adjust, dispatch or change stock.
     // ══════════════════════════════════════════════════════════
-    Route::middleware('api.role:Farmmantra Staff,Warehouse,System Administrator')->prefix('staff')->group(function () {
+    Route::middleware('api.role:Farmmantra Staff,Warehouse,System Administrator,Sales Head')->prefix('staff')->group(function () {
 
         Route::get('/dashboard', StaffDashboardController::class);
 
@@ -215,4 +220,27 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::put('/settings', [SettingsController::class, 'update']);
         Route::post('/settings/upload-image', [SettingsController::class, 'uploadImage']);
     });
+});
+
+Route::middleware(['auth:sanctum', 'api.role', 'franchise.active'])->prefix('operations')->group(function () {
+    Route::get('/dashboard', [WorkspaceController::class, 'dashboard']);
+    Route::get('/options', [WorkspaceController::class, 'options']);
+    Route::post('/orders/{order}/review', [WorkspaceController::class, 'reviewOrder']);
+    Route::get('/requests', [RequestController::class, 'index']);
+    Route::post('/requests', [RequestController::class, 'store']);
+    Route::post('/requests/{operation}/review', [RequestController::class, 'review']);
+    Route::get('/requests/{operation}/receipt', [RequestController::class, 'receipt']);
+    Route::get('/returns/eligible-orders', [ReturnController::class, 'eligible']);
+    Route::get('/returns', [ReturnController::class, 'index']);
+    Route::post('/returns', [ReturnController::class, 'store']);
+    Route::post('/returns/{return}/review', [ReturnController::class, 'review']);
+    Route::get('/returns/{return}/photos/{index}', [ReturnController::class, 'photo'])->whereNumber('index');
+    Route::get('/knowledge', [KnowledgeController::class, 'index']);
+    Route::post('/knowledge', [KnowledgeController::class, 'store']);
+    Route::post('/knowledge/{article}', [KnowledgeController::class, 'store']);
+    Route::get('/targets', [WorkspaceController::class, 'targets']);
+    Route::post('/targets', [WorkspaceController::class, 'storeTarget']);
+    Route::get('/zones', [WorkspaceController::class, 'zones']);
+    Route::post('/zones', [WorkspaceController::class, 'storeZone']);
+    Route::get('/export', [ExportController::class, 'download']);
 });

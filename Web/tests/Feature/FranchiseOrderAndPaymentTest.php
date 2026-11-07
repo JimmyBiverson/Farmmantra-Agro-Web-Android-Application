@@ -184,6 +184,7 @@ class FranchiseOrderAndPaymentTest extends TestCase
             'expected_delivery_date' => now()->addDays(5)->toDateString(),
         ])->assertStatus(403);
         Sanctum::actingAs($this->warehouseUser);
+        $this->completeOrderReviews($order);
         $approveResponse = $this->postJson("/api/staff/orders/{$order->id}/approve", [
             'expected_delivery_date' => now()->addDays(5)->toDateString(),
             'notes' => 'Approved to dispatch',

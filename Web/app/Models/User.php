@@ -73,6 +73,16 @@ class User extends Authenticatable
         return $this->role?->name === 'System Administrator';
     }
 
+    public function isSalesHead(): bool
+    {
+        return $this->role?->name === 'Sales Head';
+    }
+
+    public function isAgronomist(): bool
+    {
+        return $this->role?->name === 'Field Agronomist';
+    }
+
     public function isStaff(): bool
     {
         return $this->role?->name === 'Farmmantra Staff';
@@ -139,7 +149,7 @@ class User extends Authenticatable
     public function scopeOrderWatchers($query)
     {
         return $query->where('is_active', true)
-            ->whereHas('role', fn ($q) => $q->whereIn('name', ['Warehouse', 'Farmmantra Staff']));
+            ->whereHas('role', fn ($q) => $q->whereIn('name', ['Warehouse', 'Farmmantra Staff', 'Sales Head', 'System Administrator']));
     }
 
     public function getAvatarUrlAttribute(): ?string

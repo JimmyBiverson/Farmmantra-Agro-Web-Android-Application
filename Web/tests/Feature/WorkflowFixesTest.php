@@ -108,7 +108,10 @@ class WorkflowFixesTest extends TestCase
         ]);
         $response->assertStatus(201);
 
-        return Order::find($response->json('data.id'));
+        $order = Order::findOrFail($response->json('data.id'));
+        $this->completeOrderReviews($order);
+
+        return $order->fresh();
     }
 
     public function test_order_decline_records_audit_fields_and_item_status(): void

@@ -11,6 +11,7 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
+        'review_stage', 'review_history', 'closed_at',
         'order_number', 'franchise_id', 'ordered_by', 'status',
         'delivery_status', 'delivery_declined_reason',
         'received_at', 'served_at', 'completed_at', 'notes',
@@ -25,6 +26,7 @@ class Order extends Model
     public const DISPATCH_MEANS = ['truck' => 'Truck', 'bus' => 'Bus', 'pickup' => 'Pick-up', 'motorcycle' => 'Motorcycle', 'collected' => 'Collected by franchise', 'other' => 'Other'];
 
     protected $casts = [
+        'review_history' => 'array', 'closed_at' => 'datetime',
         'total_amount' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'amount_paid' => 'decimal:2',

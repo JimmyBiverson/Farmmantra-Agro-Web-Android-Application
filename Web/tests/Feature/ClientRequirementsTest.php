@@ -98,7 +98,10 @@ class ClientRequirementsTest extends TestCase
         $res = $this->postJson('/api/franchise/orders', ['items' => $items, 'payment_terms' => $terms]);
         $res->assertStatus(201);
 
-        return Order::findOrFail($res->json('data.id'));
+        $order = Order::findOrFail($res->json('data.id'));
+        $this->completeOrderReviews($order);
+
+        return $order->fresh();
     }
 
     private function approve(Order $order): void
@@ -514,6 +517,7 @@ class ClientRequirementsTest extends TestCase
         $order = $this->placeOrder($this->gulu, [['product_id' => $this->abc1l->id, 'quantity' => 10]]);
 
         $this->actingAs($this->staff)->post(route('web.ops.orders.approve', $order), ['expected_delivery_date' => now()->addDays(2)->toDateString()])->assertForbidden();
+        $this->completeOrderReviews($order);
         $this->actingAs($this->warehouse)->post(route('web.ops.orders.approve', $order), ['expected_delivery_date' => now()->addDays(2)->toDateString()])->assertSessionHas('success');
         $this->assertEquals(990, (float) WarehouseInventory::where('product_id', $this->abc1l->id)->value('quantity'));
         $this->assertNotNull(StockReceipt::where('order_id', $order->id)->first(), 'Web approval creates the stock receipt');

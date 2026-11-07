@@ -49,13 +49,13 @@ class CreditNoteService
     /**
      * @param  array<int, array{product_id:int, quantity:numeric}>  $items
      */
-    public static function recordSalesReturn(Franchise $franchise, User $actor, array $items, string $reason, ?int $orderId = null): CreditNote
+    public static function recordSalesReturn(Franchise $franchise, User $actor, array $items, string $reason, ?int $orderId = null, array $unitPrices = []): CreditNote
     {
         if (empty($items)) {
             throw ValidationException::withMessages(['items' => 'Add at least one returned product.']);
         }
 
-        return DB::transaction(function () use ($franchise, $actor, $items, $reason, $orderId) {
+        return DB::transaction(function () use ($franchise, $actor, $items, $reason, $orderId, $unitPrices) {
             $lines = [];
             $amount = 0.0;
             foreach ($items as $item) {
@@ -65,7 +65,7 @@ class CreditNoteService
                 if ($qty <= 0 || ! $inventory || (float) $inventory->quantity < $qty) {
                     throw ValidationException::withMessages(['items' => "{$franchise->name} does not hold {$qty} of {$product->name} to return."]);
                 }
-                $unit = (float) $product->standard_price;
+                $unit = (float) ($unitPrices[$product->id] ?? $product->standard_price);
                 $lines[] = ['product_id' => $product->id, 'product_name' => $product->name, 'quantity' => $qty, 'unit_price' => $unit, 'subtotal' => round($qty * $unit, 2)];
                 $amount += round($qty * $unit, 2);
 
