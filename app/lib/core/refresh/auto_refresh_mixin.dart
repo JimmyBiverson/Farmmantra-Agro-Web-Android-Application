@@ -18,7 +18,12 @@ mixin AutoRefreshMixin<T extends StatefulWidget> on State<T> {
     _lifecycleObserver = _LifecycleObserver(onAutoRefresh);
     WidgetsBinding.instance.addObserver(_lifecycleObserver!);
     _autoRefreshTimer?.cancel();
-    _autoRefreshTimer = Timer.periodic(refreshInterval, (_) => onAutoRefresh());
+    _autoRefreshTimer = Timer.periodic(refreshInterval, (_) {
+      if (mounted &&
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+        onAutoRefresh();
+      }
+    });
   }
 
   @override

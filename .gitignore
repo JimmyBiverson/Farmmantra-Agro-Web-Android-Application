@@ -37,3 +37,9 @@ Web/bootstrap/cache/*.php
 **/*.aab
 **/*.hprof
 **/.kotlin/
+
+/tmp/
+app/november-fixes.txt
+app/november-tests.txt
+app/november-analysis-results.txt
+app/november-format-results.txt

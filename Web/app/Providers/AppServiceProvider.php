@@ -21,6 +21,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         View::composer('*', function ($view) {
+            $context = request()->attributes->get('farmmantra.view_context');
+            if (is_array($context)) {
+                $view->with($context);
+
+                return;
+            }
             $site = [];
             $notif = [];
 
@@ -91,6 +97,7 @@ class AppServiceProvider extends ServiceProvider
 
                 $view->with(compact('bellCount', 'role', 'nOrders', 'nPayments', 'nLowStock', 'nPendingTotal', 'nMyOrders', 'nMyPayments', 'nMyLowStock'));
             }
+            request()->attributes->set('farmmantra.view_context', array_intersect_key($view->getData(), array_flip(['site', 'notif', 'bellCount', 'role', 'nOrders', 'nPayments', 'nLowStock', 'nPendingTotal', 'nMyOrders', 'nMyPayments', 'nMyLowStock'])));
         });
     }
 }

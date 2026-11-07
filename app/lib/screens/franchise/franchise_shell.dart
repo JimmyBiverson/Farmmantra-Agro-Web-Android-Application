@@ -1,3 +1,7 @@
+import '../../features/operations/presentation/operations_home.dart';
+import '../../features/operations/presentation/knowledge_screen.dart';
+import '../../features/operations/presentation/workspace_ui.dart';
+import '../../widgets/common/workspace_bottom_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -70,18 +74,25 @@ class _FranchiseShellState extends State<FranchiseShell>
   @override
   void onAutoRefresh() {
     if (!mounted) return;
-    final productProvider = context.read<ProductProvider>();
-    productProvider.loadCategories(silent: true);
-    productProvider.loadProducts(
-      categoryId: productProvider.selectedCategory,
-      silent: true,
-      resetFilters: false,
-    );
-    context.read<OrderProvider>().loadOrders(silent: true);
-    context.read<InventoryProvider>().loadInventory(silent: true);
-    context.read<PaymentProvider>().loadPayments(silent: true);
-    context.read<PaymentProvider>().loadAccountSummary(silent: true);
-    context.read<CustomerProvider>().loadCustomers(silent: true);
+    if (_currentTab == 0 || _currentTab == 1) {
+      context.read<OrderProvider>().loadOrders(silent: true);
+    }
+    if (_currentTab == 0 || _currentTab == 3) {
+      context.read<InventoryProvider>().loadInventory(silent: true);
+    }
+    if (_currentTab == 2) {
+      final products = context.read<ProductProvider>();
+      products.loadCategories(silent: true);
+      products.loadProducts(
+        categoryId: products.selectedCategory,
+        silent: true,
+        resetFilters: false,
+      );
+    }
+    if (_currentTab == 4) {
+      context.read<PaymentProvider>().loadPayments(silent: true);
+      context.read<PaymentProvider>().loadAccountSummary(silent: true);
+    }
     context.read<NotificationProvider>().loadNotifications(silent: true);
     context.read<NotificationProvider>().refreshUnreadCount();
   }
@@ -200,6 +211,18 @@ class _FranchiseShellState extends State<FranchiseShell>
           appBar: AppBar(
             title: Text(_getAppBarTitle()),
             actions: [
+              IconButton(
+                tooltip: 'My workspace',
+                icon: const Icon(Icons.grid_view_rounded),
+                onPressed: () =>
+                    openWorkspace(context, const OperationsHubScreen()),
+              ),
+              IconButton(
+                tooltip: 'Knowledge library',
+                icon: const Icon(Icons.menu_book_outlined),
+                onPressed: () =>
+                    openWorkspace(context, const KnowledgeScreen()),
+              ),
               _buildCartAction(),
               IconButton(
                 icon: const Icon(Icons.headset_mic_outlined),
@@ -270,17 +293,9 @@ class _FranchiseShellState extends State<FranchiseShell>
                   label: const Text('New Order'),
                 )
               : null,
-          bottomNavigationBar: BottomNavigationBar(
+          bottomNavigationBar: WorkspaceBottomBar(
             currentIndex: _currentTab,
             onTap: _switchTab,
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: AppColors.primaryGreen,
-            unselectedItemColor: AppColors.textLight,
-            selectedLabelStyle: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-            unselectedLabelStyle: const TextStyle(fontSize: 11),
             items: const [
               BottomNavigationBarItem(
                 icon: Icon(Icons.dashboard_outlined),

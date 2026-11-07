@@ -834,6 +834,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             Formatters.currency(order.balanceDue),
             color: order.balanceDue > 0 ? AppColors.warning : AppColors.success,
           ),
+          if (order.reviewStage != null &&
+              order.statusEnum == OrderStatus.pending)
+            row('Current review', order.reviewStage!.replaceAll('_', ' ')),
+          for (final review in order.reviewHistory)
+            row(
+              review['stage'].toString().replaceAll('_', ' '),
+              '${review['name']} · ${review['notes']}',
+            ),
+          if (order.closedAt != null)
+            row('Settlement', 'Closed · fully paid', color: AppColors.success),
+          if (order.receivedAmount != null)
+            row(
+              'Received goods value',
+              Formatters.currency(order.receivedAmount),
+            ),
           if (order.dispatchMeansLabel != null)
             row(
               'Dispatched by',

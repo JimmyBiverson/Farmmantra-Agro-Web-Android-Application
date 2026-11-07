@@ -251,13 +251,29 @@ class PaymentService
             ->orderBy('id')
             ->get();
 
-        foreach ($orders as $order) {
-            $due = (float) ($charged[$order->id] ?? $order->total_amount);
-            $paid = round(min($due, $pool), 2);
-            $pool = round($pool - $paid, 2);
-            if ((float) $order->amount_paid !== $paid) {
-                $order->forceFill(['amount_paid' => $paid])->saveQuietly();
+        $allocated = array_fill_keys($orders->pluck('id')->all(), 0.0);
+        $payments = PaymentSubmission::where('franchise_id', $franchise->id)->where('status', 'accepted')->with('orders')->orderBy('accepted_at')->orderBy('id')->get();
+        foreach ($payments as $payment) {
+            $remaining = min($pool, (float) $payment->verified_amount);
+            foreach ($payment->orders->sortBy('id') as $linked) {
+                if (! array_key_exists($linked->id, $allocated)) {
+                    continue;
+                }
+                $due = (float) ($charged[$linked->id] ?? $linked->received_amount ?? $linked->total_amount);
+                $part = round(min(max(0, $due - $allocated[$linked->id]), $remaining), 2);
+                $allocated[$linked->id] += $part;
+                $remaining -= $part;
+                $pool -= $part;
+                $payment->orders()->updateExistingPivot($linked->id, ['allocated_amount' => $part]);
             }
+        }
+        foreach ($orders as $order) {
+            $due = (float) ($charged[$order->id] ?? $order->received_amount ?? $order->total_amount);
+            $extra = round(min(max(0, $due - $allocated[$order->id]), $pool), 2);
+            $pool = round($pool - $extra, 2);
+            $paid = round($allocated[$order->id] + $extra, 2);
+            $closed = $order->delivery_status === 'confirmed' && $paid >= $due;
+            $order->forceFill(['amount_paid' => $paid, 'closed_at' => $closed ? ($order->closed_at ?? now()) : null])->saveQuietly();
         }
     }
 }

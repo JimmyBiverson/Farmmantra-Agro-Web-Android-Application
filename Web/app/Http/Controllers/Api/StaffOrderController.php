@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\ActivityLogger;
 use App\Services\NotificationService;
 use App\Services\OrderService;
+use App\Services\ReviewService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -82,6 +83,7 @@ class StaffOrderController extends Controller
 
     public function adjust(Request $request, Order $order): JsonResponse
     {
+        ReviewService::assertWarehouseReady($order);
         $request->validate([
             'items' => 'required|array',
             'items.*.order_item_id' => 'required|exists:order_items,id',

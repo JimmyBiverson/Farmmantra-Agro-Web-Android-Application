@@ -1,3 +1,7 @@
+import '../../features/operations/presentation/operations_home.dart';
+import '../../features/operations/presentation/knowledge_screen.dart';
+import '../../features/operations/presentation/workspace_ui.dart';
+import '../../widgets/common/workspace_bottom_bar.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -8,7 +12,6 @@ import '../../core/refresh/auto_refresh_mixin.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/order_provider.dart';
 import '../../providers/inventory_provider.dart';
-import '../../providers/payment_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../widgets/common/logout_dialog.dart';
 import '../../services/notification_service.dart';
@@ -50,16 +53,21 @@ class _StaffShellState extends State<StaffShell>
   void _loadInitialData() {
     context.read<OrderProvider>().loadOrders();
     context.read<InventoryProvider>().loadInventory();
-    context.read<PaymentProvider>().loadPayments();
     context.read<NotificationProvider>().loadNotifications();
   }
 
   @override
   void onAutoRefresh() {
     if (!mounted) return;
-    context.read<OrderProvider>().loadOrders(silent: true);
-    context.read<InventoryProvider>().loadInventory(silent: true);
-    context.read<PaymentProvider>().loadPayments(silent: true);
+    if (_currentTab == 0) {
+      context.read<OrderProvider>().loadStaffDashboard(silent: true);
+    }
+    if (_currentTab <= 1) {
+      context.read<OrderProvider>().loadOrders(silent: true);
+    }
+    if (_currentTab == 0 || _currentTab == 2) {
+      context.read<InventoryProvider>().loadInventory(silent: true);
+    }
     context.read<NotificationProvider>().loadNotifications(silent: true);
     context.read<NotificationProvider>().refreshUnreadCount();
   }
@@ -110,7 +118,9 @@ class _StaffShellState extends State<StaffShell>
   void _refreshTabData(int index) {
     if (!mounted) return;
     if (index == 2) {
-      context.read<InventoryProvider>().loadInventory(silent: true);
+      if (_currentTab == 0 || _currentTab == 2) {
+        context.read<InventoryProvider>().loadInventory(silent: true);
+      }
     }
   }
 
@@ -127,6 +137,18 @@ class _StaffShellState extends State<StaffShell>
           appBar: AppBar(
             title: Text(_getAppBarTitle()),
             actions: [
+              IconButton(
+                tooltip: 'My workspace',
+                icon: const Icon(Icons.grid_view_rounded),
+                onPressed: () =>
+                    openWorkspace(context, const OperationsHubScreen()),
+              ),
+              IconButton(
+                tooltip: 'Knowledge library',
+                icon: const Icon(Icons.menu_book_outlined),
+                onPressed: () =>
+                    openWorkspace(context, const KnowledgeScreen()),
+              ),
               Stack(
                 children: [
                   IconButton(
@@ -166,17 +188,9 @@ class _StaffShellState extends State<StaffShell>
             ],
           ),
           body: _buildBody(),
-          bottomNavigationBar: BottomNavigationBar(
+          bottomNavigationBar: WorkspaceBottomBar(
             currentIndex: _currentTab,
             onTap: _switchTab,
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: AppColors.primaryGreen,
-            unselectedItemColor: AppColors.textLight,
-            selectedLabelStyle: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-            unselectedLabelStyle: const TextStyle(fontSize: 11),
             items: const [
               BottomNavigationBarItem(
                 icon: Icon(Icons.dashboard_outlined),
@@ -441,6 +455,17 @@ class _StaffProfileTab extends StatelessWidget {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'My workspace',
+            icon: const Icon(Icons.grid_view_rounded),
+            onPressed: () =>
+                openWorkspace(context, const OperationsHubScreen()),
+          ),
+          IconButton(
+            tooltip: 'Knowledge library',
+            icon: const Icon(Icons.menu_book_outlined),
+            onPressed: () => openWorkspace(context, const KnowledgeScreen()),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
@@ -502,6 +527,17 @@ class _StaffProfileTab extends StatelessWidget {
           ],
         ),
         actions: [
+          IconButton(
+            tooltip: 'My workspace',
+            icon: const Icon(Icons.grid_view_rounded),
+            onPressed: () =>
+                openWorkspace(context, const OperationsHubScreen()),
+          ),
+          IconButton(
+            tooltip: 'Knowledge library',
+            icon: const Icon(Icons.menu_book_outlined),
+            onPressed: () => openWorkspace(context, const KnowledgeScreen()),
+          ),
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
@@ -647,6 +683,17 @@ class _StaffProfileTab extends StatelessWidget {
           ),
         ),
         actions: [
+          IconButton(
+            tooltip: 'My workspace',
+            icon: const Icon(Icons.grid_view_rounded),
+            onPressed: () =>
+                openWorkspace(context, const OperationsHubScreen()),
+          ),
+          IconButton(
+            tooltip: 'Knowledge library',
+            icon: const Icon(Icons.menu_book_outlined),
+            onPressed: () => openWorkspace(context, const KnowledgeScreen()),
+          ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             style: ElevatedButton.styleFrom(

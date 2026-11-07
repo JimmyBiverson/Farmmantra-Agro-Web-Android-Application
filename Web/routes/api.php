@@ -224,6 +224,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::middleware(['auth:sanctum', 'api.role', 'franchise.active'])->prefix('operations')->group(function () {
     Route::get('/dashboard', [WorkspaceController::class, 'dashboard']);
+    Route::get('/customers', [WorkspaceController::class, 'customers']);
+    Route::post('/customers', [WorkspaceController::class, 'storeCustomer']);
     Route::get('/options', [WorkspaceController::class, 'options']);
     Route::post('/orders/{order}/review', [WorkspaceController::class, 'reviewOrder']);
     Route::get('/requests', [RequestController::class, 'index']);
@@ -235,6 +237,7 @@ Route::middleware(['auth:sanctum', 'api.role', 'franchise.active'])->prefix('ope
     Route::post('/returns', [ReturnController::class, 'store']);
     Route::post('/returns/{return}/review', [ReturnController::class, 'review']);
     Route::get('/returns/{return}/photos/{index}', [ReturnController::class, 'photo'])->whereNumber('index');
+    Route::get('/knowledge/facets', [KnowledgeController::class, 'facets']);
     Route::get('/knowledge', [KnowledgeController::class, 'index']);
     Route::post('/knowledge', [KnowledgeController::class, 'store']);
     Route::post('/knowledge/{article}', [KnowledgeController::class, 'store']);

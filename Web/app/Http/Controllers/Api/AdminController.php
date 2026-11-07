@@ -204,6 +204,9 @@ class AdminController extends Controller
             'packaging_details' => 'nullable|string',
             'standard_price' => 'required|numeric|min:0',
             'description' => 'nullable|string',
+            'batch_number' => 'nullable|string|max:100',
+            'manufactured_at' => 'nullable|date', 'expires_at' => 'nullable|date|after_or_equal:manufactured_at', 'active_ingredient' => 'nullable|string|max:2000',
+            'selling_price' => 'nullable|numeric|min:0', 'farmer_price' => 'nullable|numeric|min:0',
             'tax_enabled' => 'nullable|boolean',
             'tax_type' => 'nullable|string|in:percentage,fixed',
             'tax_rate' => 'nullable|numeric|min:0',
@@ -213,7 +216,7 @@ class AdminController extends Controller
 
         $data = $request->only([
             'name', 'sku', 'category_id', 'unit_of_measure',
-            'packaging_details', 'standard_price', 'description',
+            'batch_number', 'manufactured_at', 'expires_at', 'active_ingredient', 'selling_price', 'farmer_price', 'packaging_details', 'standard_price', 'description',
         ]);
 
         $data = array_merge($data, $this->applyTaxFields($request, $request->input('standard_price')));
@@ -246,12 +249,16 @@ class AdminController extends Controller
     {
         $request->validate([
             'name' => 'sometimes|string|max:255',
+            'sku' => 'sometimes|string|unique:products,sku,'.$product->id,
             'category_id' => 'sometimes|exists:categories,id',
             'unit_of_measure' => 'nullable|string|max:50',
             'packaging_details' => 'nullable|string',
             'standard_price' => 'sometimes|numeric|min:0',
             'description' => 'nullable|string',
             'is_active' => 'boolean',
+            'batch_number' => 'nullable|string|max:100',
+            'manufactured_at' => 'nullable|date', 'expires_at' => 'nullable|date|after_or_equal:manufactured_at', 'active_ingredient' => 'nullable|string|max:2000',
+            'selling_price' => 'nullable|numeric|min:0', 'farmer_price' => 'nullable|numeric|min:0',
             'tax_enabled' => 'nullable|boolean',
             'tax_type' => 'nullable|string|in:percentage,fixed',
             'tax_rate' => 'nullable|numeric|min:0',
@@ -260,8 +267,8 @@ class AdminController extends Controller
         ]);
 
         $data = $request->only([
-            'name', 'category_id', 'unit_of_measure',
-            'packaging_details', 'standard_price', 'description', 'is_active',
+            'name', 'sku', 'category_id', 'unit_of_measure',
+            'batch_number', 'manufactured_at', 'expires_at', 'active_ingredient', 'selling_price', 'farmer_price', 'packaging_details', 'standard_price', 'description', 'is_active',
         ]);
 
         $data = array_merge($data, $this->applyTaxFields($request, $product->standard_price));

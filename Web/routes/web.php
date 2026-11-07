@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\Operations\ExportController;
+use App\Http\Controllers\Api\Operations\KnowledgeController;
+use App\Http\Controllers\Api\Operations\RequestController;
+use App\Http\Controllers\Api\Operations\ReturnController;
+use App\Http\Controllers\Api\Operations\WorkspaceController;
+use App\Http\Controllers\Api\StaffOrderController;
 use App\Http\Controllers\PaymentProofController;
 use App\Http\Controllers\Web\AccountsController;
 use App\Http\Controllers\Web\AdminExtrasController;
@@ -206,3 +212,31 @@ Route::middleware(AuthenticateWeb::class)->group(function () {
 });
 
 Route::get('/payment-proofs/{payment}', PaymentProofController::class)->middleware('signed:relative')->name('payment.proof');
+
+Route::view('/workspace', 'operations.index')->middleware(AuthenticateWeb::class)->name('web.workspace');
+Route::middleware([AuthenticateWeb::class, 'api.role', 'franchise.active'])->prefix('workspace/data')->group(function () {
+    Route::get('/orders', [StaffOrderController::class, 'index'])->middleware('api.role:Sales Head,System Administrator,Warehouse');
+    Route::get('/dashboard', [WorkspaceController::class, 'dashboard']);
+    Route::get('/customers', [WorkspaceController::class, 'customers']);
+    Route::post('/customers', [WorkspaceController::class, 'storeCustomer']);
+    Route::get('/options', [WorkspaceController::class, 'options']);
+    Route::post('/orders/{order}/review', [WorkspaceController::class, 'reviewOrder']);
+    Route::get('/requests', [RequestController::class, 'index']);
+    Route::post('/requests', [RequestController::class, 'store']);
+    Route::post('/requests/{operation}/review', [RequestController::class, 'review']);
+    Route::get('/requests/{operation}/receipt', [RequestController::class, 'receipt']);
+    Route::get('/returns/eligible-orders', [ReturnController::class, 'eligible']);
+    Route::get('/returns', [ReturnController::class, 'index']);
+    Route::post('/returns', [ReturnController::class, 'store']);
+    Route::post('/returns/{return}/review', [ReturnController::class, 'review']);
+    Route::get('/returns/{return}/photos/{index}', [ReturnController::class, 'photo'])->whereNumber('index');
+    Route::get('/knowledge/facets', [KnowledgeController::class, 'facets']);
+    Route::get('/knowledge', [KnowledgeController::class, 'index']);
+    Route::post('/knowledge', [KnowledgeController::class, 'store']);
+    Route::post('/knowledge/{article}', [KnowledgeController::class, 'store']);
+    Route::get('/targets', [WorkspaceController::class, 'targets']);
+    Route::post('/targets', [WorkspaceController::class, 'storeTarget']);
+    Route::get('/zones', [WorkspaceController::class, 'zones']);
+    Route::post('/zones', [WorkspaceController::class, 'storeZone']);
+    Route::get('/export', [ExportController::class, 'download']);
+});

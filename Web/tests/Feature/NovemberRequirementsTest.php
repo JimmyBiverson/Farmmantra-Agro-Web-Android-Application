@@ -9,11 +9,17 @@ use App\Models\FranchiseInventory;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Role;
+use App\Models\SaleItem;
+use App\Models\SalesTarget;
 use App\Models\StockReceipt;
 use App\Models\User;
 use App\Models\WarehouseInventory;
+use App\Services\LedgerService;
+use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
@@ -118,6 +124,7 @@ class NovemberRequirementsTest extends TestCase
         $this->postJson('/api/v1/operations/knowledge', $data)->assertUnprocessable();
         $this->login('field');
         $this->getJson('/api/v1/operations/knowledge')->assertJsonCount(0, 'data');
+        $this->getJson('/api/v1/operations/knowledge/facets')->assertOk()->assertJsonCount(0, 'data');
         $this->postJson('/api/v1/operations/knowledge', $data)->assertForbidden();
     }
 
@@ -164,5 +171,90 @@ class NovemberRequirementsTest extends TestCase
         $zip->close();
         $this->login('franchise');
         $this->getJson('/api/v1/operations/export?report=warehouse')->assertForbidden();
+    }
+
+    public function test_linked_payments_close_the_selected_received_order_instead_of_an_older_order(): void
+    {
+        $first = $this->place();
+        $second = $this->place();
+        foreach ([$first, $second] as $order) {
+            $order->update(['status' => 'delivered', 'delivery_status' => 'confirmed', 'received_at' => now(), 'received_amount' => 10000]);
+            LedgerService::charge($this->franchise, 'purchase', 10000, 'Purchase', $order, $order->order_number, $this->actors['franchise']->id);
+        }
+        $payment = PaymentService::submit($this->actors['franchise'], ['amount' => 10000, 'payment_method' => 'bank_transfer', 'order_ids' => [$second->id]]);
+        PaymentService::verify($payment, $this->actors['finance'], 10000, 'Bank checked');
+        PaymentService::accept($payment->fresh(), $this->actors['finance']);
+        $this->assertEquals(0, $first->fresh()->amount_paid);
+        $this->assertEquals(10000, $second->fresh()->amount_paid);
+        $this->assertNotNull($second->fresh()->closed_at);
+        PaymentService::allocateOutstanding($this->franchise->fresh());
+        $this->assertEquals(10000, $second->fresh()->amount_paid);
+    }
+
+    public function test_expense_totals_only_count_finance_approved_entries_against_monthly_budget(): void
+    {
+        $this->login('franchise');
+        $id = $this->postJson('/api/v1/operations/requests', ['type' => 'expense', 'title' => 'Fuel', 'amount' => 100, 'entry_date' => today()->toDateString(), 'details' => ['notes' => 'Daily expense']])->assertCreated()->json('data.id');
+        $this->login('admin');
+        $this->postJson('/api/v1/operations/requests', ['type' => 'budget', 'title' => 'Monthly operations', 'amount' => 1000, 'entry_date' => today()->toDateString(), 'details' => ['notes' => 'Client budget']])->assertCreated();
+        $this->getJson('/api/v1/operations/dashboard')->assertJsonPath('data.monthly_expenses', 0);
+        $this->login('finance');
+        $this->postJson('/api/v1/operations/requests/'.$id.'/review', ['action' => 'approve', 'notes' => 'Receipt checked'])->assertOk();
+        $this->getJson('/api/v1/operations/dashboard')->assertJsonPath('data.monthly_expenses', 100)->assertJsonPath('data.budget_used_percentage', 10);
+    }
+
+    public function test_web_workspace_and_mobile_use_the_same_controllers_with_session_authentication(): void
+    {
+        $this->actingAs($this->actors['admin']);
+        $this->get('/workspace')->assertOk()->assertSee('Operations workspace')->assertSee('Knowledge');
+        foreach (['dashboard', 'options', 'requests', 'orders', 'returns', 'knowledge', 'targets', 'zones'] as $resource) {
+            $this->getJson('/workspace/data/'.$resource)->assertOk();
+        }
+        $this->get('/workspace/data/export?report=warehouse')->assertOk();
+    }
+
+    public function test_legacy_return_entry_cannot_bypass_goods_return_reviews(): void
+    {
+        $this->actingAs($this->actors['finance']);
+        $this->post(route('web.accounts.creditNotes.store'), ['type' => 'sales_return', 'franchise_id' => $this->franchise->id, 'reason' => 'Damaged products', 'items' => [['product_id' => $this->product->id, 'quantity' => 1]]]);
+        $this->assertEquals(100, WarehouseInventory::first()->quantity);
+        $this->assertDatabaseCount('credit_notes', 0);
+    }
+
+    public function test_daily_due_alerts_do_not_repeat_on_same_day(): void
+    {
+        Cache::flush();
+        $order = $this->place();
+        $order->update(['status' => 'delivered', 'received_at' => now()->subDays(16), 'amount_paid' => 0]);
+        $this->artisan('farmmantra:operational-alerts')->assertSuccessful();
+        $count = DB::table('notifications')->count();
+        $this->assertGreaterThan(0, $count);
+        $this->artisan('farmmantra:operational-alerts')->assertSuccessful();
+        $this->assertEquals($count, DB::table('notifications')->count());
+    }
+
+    public function test_product_targets_count_only_matching_sale_lines_and_dashboard_shows_achievement(): void
+    {
+        $other = Product::create(['name' => 'Other seed', 'sku' => 'NOV-2', 'category_id' => $this->product->category_id, 'standard_price' => 1000, 'selling_price' => 1200, 'is_active' => true]);
+        $saleId = DB::table('sales')->insertGetId(['sale_number' => 'TARGET-SALE', 'franchise_id' => $this->franchise->id, 'total_amount' => 10000, 'final_amount' => 10000, 'sale_date' => today()->toDateString(), 'created_at' => now(), 'updated_at' => now()]);
+        foreach ([[$this->product->id, 2000], [$other->id, 8000]] as [$product,$amount]) {
+            SaleItem::create(['sale_id' => $saleId, 'product_id' => $product, 'quantity' => 1, 'unit_price' => $amount, 'cost_price' => 1000, 'subtotal' => $amount]);
+        }
+        $target = SalesTarget::create(['franchise_id' => $this->franchise->id, 'product_id' => $this->product->id, 'target_amount' => 4000, 'period' => 'monthly', 'starts_on' => now()->startOfMonth()->toDateString(), 'ends_on' => now()->endOfMonth()->toDateString(), 'month' => now()->month, 'year' => now()->year]);
+        $this->login('franchise');
+        $this->getJson('/api/v1/operations/targets')->assertOk()->assertJsonPath('data.0.actual_amount', 2000)->assertJsonPath('data.0.achievement_percentage', 50);
+        $this->getJson('/api/v1/operations/dashboard')->assertJsonPath('data.achievements.monthly.percentage', 50);
+    }
+
+    public function test_shared_view_badges_are_queried_once_per_web_request(): void
+    {
+        $this->actingAs($this->actors['admin']);
+        $queries = [];
+        DB::listen(function ($event) use (&$queries) {
+            $queries[] = $event->sql;
+        });
+        $this->get('/workspace')->assertOk();
+        $orderCounts = array_filter($queries, fn ($sql) => str_contains(strtolower($sql), 'count(*)') && str_contains(strtolower($sql), 'from "orders"'));
+        $this->assertCount(1, $orderCounts, 'Layout partials must reuse request-scoped badge counts.');
     }
 }

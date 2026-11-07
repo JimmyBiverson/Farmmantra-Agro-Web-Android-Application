@@ -49,8 +49,11 @@ class CreditNoteService
     /**
      * @param  array<int, array{product_id:int, quantity:numeric}>  $items
      */
-    public static function recordSalesReturn(Franchise $franchise, User $actor, array $items, string $reason, ?int $orderId = null, array $unitPrices = []): CreditNote
+    public static function recordSalesReturn(Franchise $franchise, User $actor, array $items, string $reason, ?int $orderId = null, array $unitPrices = [], bool $receiptApproved = false): CreditNote
     {
+        if (! $receiptApproved) {
+            throw ValidationException::withMessages(['return' => 'Use the goods-return workflow: Sales Head approval, Admin approval, then warehouse receipt.']);
+        }
         if (empty($items)) {
             throw ValidationException::withMessages(['items' => 'Add at least one returned product.']);
         }
@@ -74,6 +77,7 @@ class CreditNoteService
                 $inventory->save();
 
                 $warehouse = WarehouseInventory::firstOrCreate(['product_id' => $product->id], ['quantity' => 0, 'reorder_level' => 0]);
+                $warehouse = WarehouseInventory::whereKey($warehouse->id)->lockForUpdate()->firstOrFail();
                 $warehouse->quantity += $qty;
                 $warehouse->save();
             }

@@ -9,6 +9,7 @@ use App\Models\DigitalSignature;
 use App\Models\District;
 use App\Models\Franchise;
 use App\Models\FranchiseInventory;
+use App\Models\GoodsReturn;
 use App\Models\News;
 use App\Models\Order;
 use App\Models\PaymentSubmission;
@@ -272,10 +273,9 @@ class ClientRequirementsTest extends TestCase
         $this->actingAs($this->finance)->post(route('web.accounts.creditNotes.store'), [
             'type' => 'credit_note', 'franchise_id' => $this->guluFranchise->id, 'amount' => 200000, 'reason' => 'Price correction',
         ])->assertSessionHas('success');
-        $this->actingAs($this->finance)->post(route('web.accounts.creditNotes.store'), [
-            'type' => 'sales_return', 'franchise_id' => $this->guluFranchise->id, 'reason' => 'Expired stock returned',
-            'items' => [['product_id' => $this->abc1l->id, 'quantity' => 10]],
-        ])->assertSessionHas('success');
+        $return = GoodsReturn::create(['number' => 'RET-STATEMENT', 'order_id' => $o->id, 'franchise_id' => $this->guluFranchise->id, 'user_id' => $this->gulu->id, 'status' => 'warehouse', 'reason' => 'Expired stock returned', 'transport' => 'Pickup', 'items' => [['product_id' => $this->abc1l->id, 'product_name' => $this->abc1l->name, 'quantity' => 10, 'unit_price' => 10000]]]);
+        Sanctum::actingAs($this->warehouse);
+        $this->postJson('/api/operations/returns/'.$return->id.'/review', ['approve' => true, 'notes' => 'Physically received after reviews'])->assertOk();
 
         // Sales return moves goods back to the warehouse.
         $this->assertEquals(90, (float) FranchiseInventory::where('franchise_id', $this->guluFranchise->id)->value('quantity'));

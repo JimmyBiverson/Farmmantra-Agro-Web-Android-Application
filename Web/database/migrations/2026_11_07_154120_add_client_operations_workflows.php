@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('review_stage')->nullable()->index();
             $table->json('review_history')->nullable();
             $table->timestamp('closed_at')->nullable();
+            $table->decimal('received_amount', 16, 2)->nullable();
         });
         Schema::table('products', function (Blueprint $table) {
             $table->string('batch_number')->nullable();
@@ -104,6 +105,6 @@ return new class extends Migration
             $table->dropColumn(['user_id', 'product_id', 'period', 'starts_on', 'ends_on']);
         });
         Schema::table('products', fn (Blueprint $table) => $table->dropColumn(['batch_number', 'manufactured_at', 'expires_at', 'active_ingredient']));
-        Schema::table('orders', fn (Blueprint $table) => $table->dropColumn(['review_stage', 'review_history', 'closed_at']));
+        Schema::table('orders', fn (Blueprint $table) => $table->dropColumn(['review_stage', 'review_history', 'closed_at', 'received_amount']));
     }
 };

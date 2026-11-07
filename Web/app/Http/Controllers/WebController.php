@@ -98,6 +98,9 @@ class WebController extends Controller
 
     public function dashboard()
     {
+        if (auth()->user()->isSalesHead() || auth()->user()->isAgronomist()) {
+            return redirect()->route('web.workspace');
+        }
         $user = Auth::user();
         $role = $user->role?->name;
         $now = now();
@@ -940,6 +943,7 @@ class WebController extends Controller
             'category_id' => 'required|exists:categories,id',
             'unit_of_measure' => 'required|string|max:50',
             'selling_price' => 'required|numeric|min:0',
+            'batch_number' => 'nullable|string|max:100', 'manufactured_at' => 'nullable|date', 'expires_at' => 'nullable|date|after_or_equal:manufactured_at', 'active_ingredient' => 'nullable|string|max:2000',
             'farmer_price' => 'nullable|numeric|min:0',
             'standard_price' => 'required|numeric|min:0',
             'packaging_details' => 'nullable|string|max:255',
@@ -950,7 +954,7 @@ class WebController extends Controller
             'image' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
             'images.*' => 'nullable|image|mimes:jpeg,png,jpg,webp|max:2048',
         ]);
-        $data = $request->only('name', 'sku', 'category_id', 'unit_of_measure', 'selling_price', 'standard_price', 'packaging_details', 'description');
+        $data = $request->only('name', 'sku', 'category_id', 'unit_of_measure', 'selling_price', 'standard_price', 'packaging_details', 'description', 'batch_number', 'manufactured_at', 'expires_at', 'active_ingredient');
         $data['farmer_price'] = $request->filled('farmer_price') ? $request->farmer_price : $request->selling_price;
 
         $taxEnabled = $request->boolean('tax_enabled');
@@ -1040,6 +1044,7 @@ class WebController extends Controller
             'category_id' => 'required|exists:categories,id',
             'unit_of_measure' => 'required|string|max:50',
             'selling_price' => 'required|numeric|min:0',
+            'batch_number' => 'nullable|string|max:100', 'manufactured_at' => 'nullable|date', 'expires_at' => 'nullable|date|after_or_equal:manufactured_at', 'active_ingredient' => 'nullable|string|max:2000',
             'farmer_price' => 'nullable|numeric|min:0',
             'standard_price' => 'required|numeric|min:0',
             'packaging_details' => 'nullable|string|max:255',
@@ -1054,7 +1059,7 @@ class WebController extends Controller
             'delete_images.*' => 'integer|exists:product_images,id',
         ]);
         $product = Product::findOrFail($request->id);
-        $data = $request->only('name', 'sku', 'category_id', 'unit_of_measure', 'selling_price', 'standard_price', 'packaging_details', 'description');
+        $data = $request->only('name', 'sku', 'category_id', 'unit_of_measure', 'selling_price', 'standard_price', 'packaging_details', 'description', 'batch_number', 'manufactured_at', 'expires_at', 'active_ingredient');
         $data['farmer_price'] = $request->filled('farmer_price') ? $request->farmer_price : $request->selling_price;
         $data['is_active'] = $request->has('is_active') ? (bool) $request->is_active : $product->is_active;
 

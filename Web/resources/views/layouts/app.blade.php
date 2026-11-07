@@ -513,7 +513,3 @@ setInterval(refreshNotifications, 15000);
 </script>
 </body>
 </html>
-
-
-
-

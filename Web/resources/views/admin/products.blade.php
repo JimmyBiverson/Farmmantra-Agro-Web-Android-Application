@@ -62,7 +62,7 @@
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-2">
                                     <button type="button" class="btn-action" title="Edit" style="color:var(--accent); background:rgba(99,102,241,0.12)"
-                                        @click="editProduct = {{ \Illuminate\Support\Js::from(['id' => $p->id, 'name' => $p->name, 'sku' => $p->sku, 'category_id' => $p->category_id ? (string) $p->category_id : '', 'unit_of_measure' => $p->unit_of_measure, 'selling_price' => (string) $p->selling_price, 'farmer_price' => (string) ($p->farmer_price ?? $p->selling_price), 'standard_price' => (string) $p->standard_price, 'packaging_details' => (string) $p->packaging_details, 'description' => (string) $p->description, 'image_url' => $p->image_url, 'gallery_images' => $p->images->map(fn($img) => ['id' => $img->id, 'url' => $img->image_url]), 'is_active' => (bool) $p->is_active, 'warehouse_qty' => $p->warehouseInventory ? (float) $p->warehouseInventory->quantity : 0, 'reorder_level' => $p->warehouseInventory ? (float) $p->warehouseInventory->reorder_level : 0, 'tax_enabled' => (bool) $p->tax_enabled, 'tax_type' => $p->tax_type ?? 'percentage', 'tax_rate' => (float) $p->tax_rate, 'tax_amount' => (float) $p->tax_amount, 'final_price' => (float) ($p->final_price ?? $p->standard_price)]) }}; editing = true">
+                                        @click="editProduct = {{ \Illuminate\Support\Js::from(['batch_number' => $p->batch_number, 'manufactured_at' => $p->manufactured_at, 'expires_at' => $p->expires_at, 'active_ingredient' => $p->active_ingredient, 'id' => $p->id, 'name' => $p->name, 'sku' => $p->sku, 'category_id' => $p->category_id ? (string) $p->category_id : '', 'unit_of_measure' => $p->unit_of_measure, 'selling_price' => (string) $p->selling_price, 'farmer_price' => (string) ($p->farmer_price ?? $p->selling_price), 'standard_price' => (string) $p->standard_price, 'packaging_details' => (string) $p->packaging_details, 'description' => (string) $p->description, 'image_url' => $p->image_url, 'gallery_images' => $p->images->map(fn($img) => ['id' => $img->id, 'url' => $img->image_url]), 'is_active' => (bool) $p->is_active, 'warehouse_qty' => $p->warehouseInventory ? (float) $p->warehouseInventory->quantity : 0, 'reorder_level' => $p->warehouseInventory ? (float) $p->warehouseInventory->reorder_level : 0, 'tax_enabled' => (bool) $p->tax_enabled, 'tax_type' => $p->tax_type ?? 'percentage', 'tax_rate' => (float) $p->tax_rate, 'tax_amount' => (float) $p->tax_amount, 'final_price' => (float) ($p->final_price ?? $p->standard_price)]) }}; editing = true">
                                         <i class="fas fa-pen"></i>
                                     </button>
                                     <form action="{{ route('web.admin.products.delete') }}" method="POST" class="inline" onsubmit="return confirm('Delete product {{ addslashes($p->name) }}?')">
@@ -267,6 +267,12 @@
                     <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Description</label>
                     <textarea name="description" rows="3" placeholder="Product description..."></textarea>
                 </div>
+                                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs font-semibold mb-1.5">Batch number</label><input name="batch_number" placeholder="Supplier batch reference"></div>
+                    <div><label class="block text-xs font-semibold mb-1.5">Active ingredient</label><input name="active_ingredient" placeholder="As shown on the approved label"></div>
+                    <div><label class="block text-xs font-semibold mb-1.5">Manufacturing date</label><input type="date" name="manufactured_at"></div>
+                    <div><label class="block text-xs font-semibold mb-1.5">Expiry date</label><input type="date" name="expires_at"></div>
+                </div>
                 {{-- Tax Configuration --}}
                 <div class="rounded-xl p-4" style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25)">
                     <div class="flex items-center justify-between mb-3">
@@ -406,6 +412,12 @@
                 <div>
                     <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Description</label>
                     <textarea name="description" rows="3" x-model="editProduct.description"></textarea>
+                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                    <div><label class="block text-xs font-semibold mb-1.5">Batch number</label><input name="batch_number" x-model="editProduct.batch_number" placeholder="Supplier batch reference"></div>
+                    <div><label class="block text-xs font-semibold mb-1.5">Active ingredient</label><input name="active_ingredient" x-model="editProduct.active_ingredient" placeholder="As shown on the approved label"></div>
+                    <div><label class="block text-xs font-semibold mb-1.5">Manufacturing date</label><input type="date" name="manufactured_at" x-model="editProduct.manufactured_at"></div>
+                    <div><label class="block text-xs font-semibold mb-1.5">Expiry date</label><input type="date" name="expires_at" x-model="editProduct.expires_at"></div>
                 </div>
                 {{-- Tax Configuration Edit --}}
                 <div class="rounded-xl p-4" style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25)">
@@ -687,4 +699,3 @@
 </template>
 </div>
 @endsection
-

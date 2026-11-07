@@ -79,7 +79,7 @@ class ReturnController extends Controller
                 'sales_head' => 'admin', 'admin' => 'warehouse', default => 'received'
             } : 'declined';
             if ($next === 'received') {
-                $note = CreditNoteService::recordSalesReturn($record->franchise, $actor, $record->items, $record->reason, $record->order_id, collect($record->items)->pluck('unit_price', 'product_id')->all());
+                $note = CreditNoteService::recordSalesReturn($record->franchise, $actor, $record->items, $record->reason, $record->order_id, collect($record->items)->pluck('unit_price', 'product_id')->all(), true);
                 $record->credit_note_id = $note->id;
             }
             $record->fill(['status' => $next, 'history' => $history])->save();

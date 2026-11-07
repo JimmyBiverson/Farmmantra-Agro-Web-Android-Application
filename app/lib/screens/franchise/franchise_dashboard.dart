@@ -1,3 +1,4 @@
+import '../../features/operations/presentation/operations_home.dart';
 import 'package:go_router/go_router.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -119,6 +120,8 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildWelcomeHeader(),
+            const SizedBox(height: 16),
+            const OperationsHome(compact: true),
             const SizedBox(height: 16),
             if (_isLoading)
               const SizedBox(height: 200, child: Center(child: LoadingView()))

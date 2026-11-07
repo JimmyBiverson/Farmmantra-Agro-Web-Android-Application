@@ -11,7 +11,7 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
-        'review_stage', 'review_history', 'closed_at',
+        'review_stage', 'review_history', 'closed_at', 'received_amount',
         'order_number', 'franchise_id', 'ordered_by', 'status',
         'delivery_status', 'delivery_declined_reason',
         'received_at', 'served_at', 'completed_at', 'notes',
@@ -106,7 +106,7 @@ class Order extends Model
 
     public function getBalanceDueAttribute(): float
     {
-        return max(0, round((float) $this->total_amount - (float) $this->amount_paid, 2));
+        return max(0, round((float) ($this->received_amount ?? $this->total_amount) - (float) $this->amount_paid, 2));
     }
 
     public function financeVerifiedByUser()

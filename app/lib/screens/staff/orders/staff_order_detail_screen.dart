@@ -504,6 +504,18 @@ class _StaffOrderDetailScreenState extends State<StaffOrderDetailScreen> {
   }
 
   Widget _buildActionSection(Order order, OrderProvider provider) {
+    if (order.statusEnum == OrderStatus.pending &&
+        order.reviewStage != null &&
+        order.reviewStage != 'warehouse') {
+      return AppCard(
+        child: Padding(
+          padding: const EdgeInsets.all(18),
+          child: Text(
+            'Awaiting ${order.reviewStage == 'sales_head' ? 'Sales Head' : 'Admin'} review. Warehouse acceptance becomes available after both approvals.',
+          ),
+        ),
+      );
+    }
     if (!_canManage &&
         (order.statusEnum == OrderStatus.pending ||
             order.statusEnum == OrderStatus.approved)) {

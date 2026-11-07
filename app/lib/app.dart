@@ -1,3 +1,10 @@
+import 'features/operations/presentation/operations_home.dart';
+import 'features/operations/presentation/returns_screen.dart';
+import 'features/operations/presentation/requests_screen.dart';
+import 'screens/admin/admin_shell.dart';
+import 'screens/sales_head/sales_head_shell.dart';
+import 'screens/agronomist/agronomist_shell.dart';
+import 'screens/warehouse/warehouse_shell.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
@@ -29,6 +36,10 @@ class _FarmmantraAppState extends State<FarmmantraApp> {
   String _home(AuthProvider auth) => switch (auth.userRole) {
     UserRole.franchisePartner => '/franchise/dashboard',
     UserRole.financeDepartment => '/finance/dashboard',
+    UserRole.systemAdministrator => '/admin/dashboard',
+    UserRole.salesHead => '/sales-head/dashboard',
+    UserRole.fieldAgronomist => '/agronomist/dashboard',
+    UserRole.warehouse => '/warehouse/dashboard',
     _ => '/staff/dashboard',
   };
 
@@ -52,7 +63,17 @@ class _FarmmantraAppState extends State<FarmmantraApp> {
         if (path == '/' || path == '/login' || path == '/terms') {
           return _home(auth);
         }
-        final authorized = path.startsWith('/franchise/')
+        final authorized = path.startsWith('/operations')
+            ? true
+            : path.startsWith('/admin/')
+            ? auth.userRole == UserRole.systemAdministrator
+            : path.startsWith('/sales-head/')
+            ? auth.userRole == UserRole.salesHead
+            : path.startsWith('/agronomist/')
+            ? auth.userRole == UserRole.fieldAgronomist
+            : path.startsWith('/warehouse/')
+            ? auth.userRole == UserRole.warehouse
+            : path.startsWith('/franchise/')
             ? auth.userRole == UserRole.franchisePartner
             : path.startsWith('/finance/')
             ? auth.userRole == UserRole.financeDepartment
@@ -64,6 +85,34 @@ class _FarmmantraAppState extends State<FarmmantraApp> {
         return authorized ? null : _home(auth);
       },
       routes: [
+        GoRoute(
+          path: '/operations',
+          builder: (_, state) => const OperationsHubScreen(),
+        ),
+        GoRoute(
+          path: '/operations/returns',
+          builder: (_, state) => const ReturnsScreen(),
+        ),
+        GoRoute(
+          path: '/operations/requests',
+          builder: (_, state) => const RequestsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/dashboard',
+          builder: (_, state) => const AdminShell(),
+        ),
+        GoRoute(
+          path: '/sales-head/dashboard',
+          builder: (_, state) => const SalesHeadShell(),
+        ),
+        GoRoute(
+          path: '/agronomist/dashboard',
+          builder: (_, state) => const AgronomistShell(),
+        ),
+        GoRoute(
+          path: '/warehouse/dashboard',
+          builder: (_, state) => const WarehouseShell(),
+        ),
         GoRoute(path: '/', builder: (_, state) => const SplashScreen()),
         GoRoute(path: '/login', builder: (_, state) => const LoginScreen()),
         GoRoute(path: '/terms', builder: (_, state) => const TermsScreen()),

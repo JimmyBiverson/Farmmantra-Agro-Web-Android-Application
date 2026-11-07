@@ -1,3 +1,7 @@
+import '../../features/operations/presentation/operations_home.dart';
+import '../../features/operations/presentation/knowledge_screen.dart';
+import '../../features/operations/presentation/workspace_ui.dart';
+import '../../widgets/common/workspace_bottom_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -113,6 +117,18 @@ class _FinanceShellState extends State<FinanceShell>
           appBar: AppBar(
             title: Text(_getAppBarTitle()),
             actions: [
+              IconButton(
+                tooltip: 'My workspace',
+                icon: const Icon(Icons.grid_view_rounded),
+                onPressed: () =>
+                    openWorkspace(context, const OperationsHubScreen()),
+              ),
+              IconButton(
+                tooltip: 'Knowledge library',
+                icon: const Icon(Icons.menu_book_outlined),
+                onPressed: () =>
+                    openWorkspace(context, const KnowledgeScreen()),
+              ),
               Stack(
                 children: [
                   IconButton(
@@ -152,17 +168,9 @@ class _FinanceShellState extends State<FinanceShell>
             ],
           ),
           body: _buildBody(),
-          bottomNavigationBar: BottomNavigationBar(
+          bottomNavigationBar: WorkspaceBottomBar(
             currentIndex: _currentTab,
             onTap: _switchTab,
-            type: BottomNavigationBarType.fixed,
-            selectedItemColor: AppColors.primaryGreen,
-            unselectedItemColor: AppColors.textLight,
-            selectedLabelStyle: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-            ),
-            unselectedLabelStyle: const TextStyle(fontSize: 11),
             items: const [
               BottomNavigationBarItem(
                 icon: Icon(Icons.dashboard_outlined),

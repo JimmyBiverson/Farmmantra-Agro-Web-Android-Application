@@ -156,6 +156,9 @@ class OrderService
 
                 if ($qty > 0) {
                     $warehouse = WarehouseInventory::where('product_id', $item->product_id)->lockForUpdate()->first();
+                    if (! $warehouse || (float) $warehouse->quantity < $qty) {
+                        throw ValidationException::withMessages(['order' => 'Warehouse stock changed. Please review the available quantity.']);
+                    }
                     $warehouse->quantity -= $qty;
                     $warehouse->save();
                     StockMovement::log('warehouse_out', $item->product_id, -$qty, $item->unit_price, Order::class, $order->id, "Order {$order->order_number} approved", $actor->id);
@@ -438,6 +441,7 @@ class OrderService
                 'delivery_status' => 'confirmed',
                 'received_at' => now(),
                 'completed_at' => now(),
+                'received_amount' => round($receivedValue, 2),
                 'delivery_signature' => $signature->signature_number,
                 'delivery_confirmed_by' => $user->id,
             ]);

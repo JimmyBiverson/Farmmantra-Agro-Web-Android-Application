@@ -36,6 +36,7 @@
         </li>
 
         <li><a href="{{ route('web.notifications') }}" class="sidebar-link {{ str_starts_with($current, 'web.notifications') ? 'active' : '' }}"><i class="fas fa-bell w-5 text-center text-sm"></i> Notifications</a></li>
+        <li><a href="{{ route('web.workspace') }}" class="sidebar-link {{ $current === 'web.workspace' ? 'active' : '' }}"><i class="fas fa-th-large w-5 text-center text-sm"></i> Operations workspace</a></li>
         {{-- ═══ ADMIN ═══ --}}
         @if($role === 'System Administrator')
 
@@ -339,4 +340,3 @@
 @if($role === 'System Administrator')
 @include('partials.secure-delete')
 @endif
-

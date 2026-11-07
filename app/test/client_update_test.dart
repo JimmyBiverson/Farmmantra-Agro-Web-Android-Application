@@ -13,6 +13,30 @@ import 'package:http/testing.dart';
 /// Tests for the October 2026 client update (warehouse role, price tiers,
 /// delivery acceptance with terms, dispatch details, statements).
 void main() {
+  test(
+    'short received deliveries use billed value and expose settlement and review trail',
+    () {
+      final order = Order.fromJson({
+        'id': 1,
+        'franchise_id': 1,
+        'franchise_name': 'Partner',
+        'items': [],
+        'total_amount': 10000,
+        'received_amount': 8000,
+        'amount_paid': 8000,
+        'status': 'delivered',
+        'delivery_status': 'confirmed',
+        'closed_at': '2026-11-07T10:00:00Z',
+        'review_stage': 'accepted',
+        'review_history': [
+          {'stage': 'sales_head', 'name': 'Sales Head', 'notes': 'Checked'},
+        ],
+      });
+      expect(order.balanceDue, 0);
+      expect(order.closedAt, isNotNull);
+      expect(order.reviewHistory.single['notes'], 'Checked');
+    },
+  );
   group('Roles', () {
     test('warehouse manages orders, sales staff only monitor', () {
       expect(UserRole.warehouse.canManageOrders, isTrue);

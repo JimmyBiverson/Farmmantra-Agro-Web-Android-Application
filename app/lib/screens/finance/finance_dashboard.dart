@@ -1,3 +1,4 @@
+import '../../features/operations/presentation/operations_home.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -52,6 +53,8 @@ class _FinanceDashboardState extends State<FinanceDashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildWelcomeHeader(),
+            const SizedBox(height: 16),
+            const OperationsHome(compact: true),
             const SizedBox(height: 20),
             if (_isLoading)
               const SizedBox(height: 200, child: Center(child: LoadingView()))

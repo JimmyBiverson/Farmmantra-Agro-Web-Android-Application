@@ -18,7 +18,7 @@ class SendOperationalAlerts extends Command
 
     public function handle(): int
     {
-        Order::with('franchise')->whereNotNull('received_at')->where('received_at', '<=', now()->subDays(15))->whereRaw('total_amount > amount_paid')->chunkById(100, function ($orders) {
+        Order::with('franchise')->whereNotNull('received_at')->where('received_at', '<=', now()->subDays(15))->whereRaw('COALESCE(received_amount, total_amount) > amount_paid')->chunkById(100, function ($orders) {
             foreach ($orders as $order) {
                 if (! Cache::add('payment-due:'.$order->id.':'.now()->toDateString(), true, now()->endOfDay())) {
                     continue;

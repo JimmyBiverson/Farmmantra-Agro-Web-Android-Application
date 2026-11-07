@@ -28,6 +28,10 @@ class Order {
   /// 'credit' (pay later, within credit limit) or 'cash' (pay before dispatch).
   final String paymentTerms;
   final double amountPaid;
+  final double? receivedAmount;
+  final DateTime? closedAt;
+  final String? reviewStage;
+  final List<Map<String, dynamic>> reviewHistory;
   final String? dispatchMeans;
   final String? dispatchVehicle;
   final String? dispatchRemarks;
@@ -65,6 +69,10 @@ class Order {
     this.paymentVerifiedCount = 0,
     this.paymentTerms = 'credit',
     this.amountPaid = 0,
+    this.receivedAmount,
+    this.closedAt,
+    this.reviewStage,
+    this.reviewHistory = const [],
     this.dispatchMeans,
     this.dispatchVehicle,
     this.dispatchRemarks,
@@ -87,7 +95,7 @@ class Order {
   bool get isCashOrder => paymentTerms == 'cash';
 
   double get balanceDue {
-    final due = totalAmount - amountPaid;
+    final due = (receivedAmount ?? totalAmount) - amountPaid;
     return due > 0 ? due : 0;
   }
 
@@ -250,6 +258,15 @@ class Order {
       ),
       paymentTerms: json['payment_terms']?.toString() ?? 'credit',
       amountPaid: _toDouble(json['amount_paid']),
+      receivedAmount: json['received_amount'] == null
+          ? null
+          : _toDouble(json['received_amount']),
+      closedAt: _parseDate(json['closed_at']),
+      reviewStage: json['review_stage']?.toString(),
+      reviewHistory: (json['review_history'] as List? ?? [])
+          .whereType<Map>()
+          .map((r) => Map<String, dynamic>.from(r))
+          .toList(),
       dispatchMeans: json['dispatch_means']?.toString(),
       dispatchVehicle: json['dispatch_vehicle']?.toString(),
       dispatchRemarks: json['dispatch_remarks']?.toString(),

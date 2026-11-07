@@ -19,6 +19,7 @@ class HttpApiService implements ApiService {
   String? _token;
   String? _userRole;
   final http.Client _client;
+  final Map<String, Future<Map<String, dynamic>>> _pendingGets = {};
 
   HttpApiService({http.Client? client}) : _client = client ?? http.Client();
 
@@ -72,8 +73,19 @@ class HttpApiService implements ApiService {
     final uri = Uri.parse(
       '${ApiEndpoints.baseUrl}$path',
     ).replace(queryParameters: queryParams);
-    final response = await _client.get(uri, headers: _headers);
-    return _handleResponse(response);
+    final key = '${_token ?? ''}:$uri';
+    final existing = _pendingGets[key];
+    if (existing != null) return existing;
+    final request = _client
+        .get(uri, headers: _headers)
+        .timeout(const Duration(seconds: 20))
+        .then(_handleResponse);
+    _pendingGets[key] = request;
+    try {
+      return await request;
+    } finally {
+      _pendingGets.remove(key);
+    }
   }
 
   Future<Map<String, dynamic>> _post(
@@ -116,13 +128,23 @@ class HttpApiService implements ApiService {
     request.fields.addAll(fields);
     request.files.addAll(files);
 
-    final streamedResponse = await _client.send(request);
+    final streamedResponse = await _client
+        .send(request)
+        .timeout(const Duration(seconds: 40));
     final response = await http.Response.fromStream(streamedResponse);
     return _handleResponse(response);
   }
 
   Map<String, dynamic> _handleResponse(http.Response response) {
-    final body = jsonDecode(response.body);
+    dynamic body;
+    try {
+      body = jsonDecode(response.body);
+    } catch (_) {
+      throw AppException(
+        message:
+            'The server returned an unreadable response. Please try again.',
+      );
+    }
 
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (body is Map<String, dynamic>) return body;
@@ -285,7 +307,9 @@ class HttpApiService implements ApiService {
       http.MultipartFile.fromBytes('avatar', fileBytes, filename: fileName),
     );
 
-    final streamedResponse = await _client.send(request);
+    final streamedResponse = await _client
+        .send(request)
+        .timeout(const Duration(seconds: 40));
     final response = await http.Response.fromStream(streamedResponse);
     final body = _handleResponse(response);
     final user = _normalizeUser(
@@ -340,6 +364,10 @@ class HttpApiService implements ApiService {
         return 'financeDepartment';
       case 'Franchise Partner':
         return 'franchisePartner';
+      case 'Sales Head':
+        return 'salesHead';
+      case 'Field Agronomist':
+        return 'fieldAgronomist';
       case 'Warehouse':
         return 'warehouse';
       default:
@@ -651,6 +679,17 @@ class HttpApiService implements ApiService {
           : Formatters.toInt(o['payment_accepted_count'] ?? 0),
       paymentTerms: o['payment_terms']?.toString() ?? 'credit',
       amountPaid: Formatters.toDouble(o['amount_paid']),
+      receivedAmount: o['received_amount'] == null
+          ? null
+          : Formatters.toDouble(o['received_amount']),
+      reviewStage: o['review_stage']?.toString(),
+      reviewHistory: (o['review_history'] as List? ?? [])
+          .whereType<Map>()
+          .map((r) => Map<String, dynamic>.from(r))
+          .toList(),
+      closedAt: o['closed_at'] == null
+          ? null
+          : DateTime.tryParse(o['closed_at'].toString()),
       dispatchMeans: o['dispatch_means']?.toString(),
       dispatchVehicle: o['dispatch_vehicle']?.toString(),
       dispatchRemarks: o['dispatch_remarks']?.toString(),
@@ -1141,7 +1180,9 @@ class HttpApiService implements ApiService {
       ),
     );
 
-    final streamedResponse = await _client.send(request);
+    final streamedResponse = await _client
+        .send(request)
+        .timeout(const Duration(seconds: 40));
     final response = await http.Response.fromStream(streamedResponse);
     final body = _handleResponse(response);
     return body['data']?['proof_of_payment_path'] ?? '';

@@ -11,6 +11,13 @@ use Illuminate\Validation\Rule;
 
 class KnowledgeController extends Controller
 {
+    public function facets(Request $request): JsonResponse
+    {
+        $rows = KnowledgeArticle::with('category:id,name')->when(! $request->user()->isAdmin(), fn ($q) => $q->where('published', true))->select(['kind', 'crop', 'category_id'])->distinct()->get();
+
+        return response()->json(['data' => $rows->map(fn ($row) => ['kind' => $row->kind, 'crop' => $row->crop, 'category_id' => $row->category_id, 'category_name' => $row->category?->name])]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $query = KnowledgeArticle::with(['category:id,name', 'product']);

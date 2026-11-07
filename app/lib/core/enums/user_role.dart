@@ -3,7 +3,9 @@ enum UserRole {
   farmmantraStaff('Farmmantra Staff'),
   financeDepartment('Finance Department'),
   systemAdministrator('System Administrator'),
-  warehouse('Warehouse');
+  warehouse('Warehouse'),
+  salesHead('Sales Head'),
+  fieldAgronomist('Field Agronomist');
 
   final String displayName;
   const UserRole(this.displayName);
@@ -25,6 +27,9 @@ enum UserRole {
       this == UserRole.systemAdministrator;
 
   bool get isMobileUser =>
+      this == UserRole.salesHead ||
+      this == UserRole.fieldAgronomist ||
+      this == UserRole.systemAdministrator ||
       this == UserRole.franchisePartner ||
       this == UserRole.farmmantraStaff ||
       this == UserRole.financeDepartment ||
