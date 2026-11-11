@@ -15,6 +15,7 @@ use App\Models\StockReceipt;
 use App\Models\User;
 use App\Models\WarehouseInventory;
 use App\Services\LedgerService;
+use App\Services\OrderService;
 use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -171,6 +172,68 @@ class NovemberRequirementsTest extends TestCase
         $zip->close();
         $this->login('franchise');
         $this->getJson('/api/v1/operations/export?report=warehouse')->assertForbidden();
+    }
+
+    public function test_franchise_stock_export_never_contains_another_franchises_inventory(): void
+    {
+        $other = Franchise::create(['name' => 'Private other branch', 'code' => 'OTHER', 'is_active' => true]);
+        foreach ([$this->franchise, $other] as $franchise) {
+            FranchiseInventory::create(['franchise_id' => $franchise->id, 'product_id' => $this->product->id, 'quantity' => 5, 'total_value' => 5000]);
+        }
+        $this->login('franchise');
+        $response = $this->get('/api/v1/operations/export?report=franchise_stock&franchise_id='.$other->id)->assertOk();
+        $zip = new \ZipArchive;
+        $this->assertTrue($zip->open($response->baseResponse->getFile()->getPathname()));
+        $sheet = $zip->getFromName('xl/worksheets/sheet1.xml');
+        $this->assertStringContainsString('Client franchise', $sheet);
+        $this->assertStringNotContainsString('Private other branch', $sheet);
+        $zip->close();
+        foreach (['sales', 'expenses', 'outstanding'] as $report) {
+            $this->getJson('/api/v1/operations/export?report='.$report)->assertForbidden();
+        }
+    }
+
+    public function test_finance_pending_counter_only_counts_actionable_submissions(): void
+    {
+        $this->login('franchise');
+        $fund = $this->postJson('/api/v1/operations/requests', ['type' => 'funds', 'title' => 'Operations', 'amount' => 100, 'entry_date' => today()->toDateString(), 'details' => ['notes' => 'Supplies']])->assertCreated()->json('data.id');
+        $expense = $this->postJson('/api/v1/operations/requests', ['type' => 'expense', 'title' => 'Expense', 'amount' => 50, 'entry_date' => today()->toDateString(), 'details' => ['notes' => 'Receipt']])->assertCreated()->json('data.id');
+        $this->login('finance');
+        $this->getJson('/api/v1/operations/dashboard')->assertJsonPath('data.pending_requests', 1);
+        $this->postJson("/api/v1/operations/requests/$expense/review", ['action' => 'approve', 'notes' => 'Checked'])->assertOk();
+        $this->getJson('/api/v1/operations/dashboard')->assertJsonPath('data.pending_requests', 0);
+        $this->login('admin');
+        $this->postJson("/api/v1/operations/requests/$fund/review", ['action' => 'approve', 'notes' => 'Approved'])->assertOk();
+        $this->login('finance');
+        $this->getJson('/api/v1/operations/dashboard')->assertJsonPath('data.pending_requests', 1);
+        $this->postJson("/api/v1/operations/requests/$fund/review", ['action' => 'pay', 'notes' => 'Transferred', 'reference' => 'BANK-AUDIT'])->assertOk();
+        $this->getJson('/api/v1/operations/dashboard')->assertJsonPath('data.pending_requests', 0);
+    }
+
+    public function test_all_five_client_business_zones_are_available(): void
+    {
+        $this->login('admin');
+        $names = collect($this->getJson('/api/v1/operations/options')->assertOk()->json('data.regions'))->pluck('name');
+        foreach (['Eastern', 'Western', 'Northern', 'Southern', 'Central'] as $name) {
+            $this->assertContains($name, $names);
+        }
+    }
+
+    public function test_admin_and_franchise_receive_dispatch_and_arrival_notifications(): void
+    {
+        $order = $this->place();
+        foreach (['sales', 'admin'] as $role) {
+            $this->login($role);
+            $this->postJson("/api/v1/operations/orders/$order->id/review", ['approve' => true, 'notes' => 'Reviewed'])->assertOk();
+        }
+        OrderService::approve($order->fresh(), $this->actors['warehouse'], today()->addDay()->toDateString());
+        OrderService::dispatch($order->fresh(), $this->actors['warehouse'], 'truck', 'Driver delivery');
+        OrderService::markDelivered($order->fresh(), $this->actors['warehouse']);
+        foreach (['admin', 'franchise'] as $role) {
+            $titles = $this->actors[$role]->notifications()->get()->pluck('data.title');
+            $this->assertContains('Dispatched — '.$order->order_number, $titles);
+            $this->assertContains('Delivered — '.$order->order_number, $titles);
+        }
     }
 
     public function test_linked_payments_close_the_selected_received_order_instead_of_an_older_order(): void

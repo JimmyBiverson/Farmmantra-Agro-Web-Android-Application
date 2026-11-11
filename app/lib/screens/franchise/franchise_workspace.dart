@@ -4,6 +4,7 @@ import '../../features/operations/presentation/role_workspace.dart';
 import '../../features/operations/presentation/requests_screen.dart';
 import '../../features/operations/presentation/returns_screen.dart';
 import '../../features/operations/presentation/reviews_targets_screen.dart';
+import '../../features/operations/presentation/field_reports_screen.dart';
 import 'sales/create_sale_screen.dart';
 import 'orders/create_order_screen.dart';
 import 'customers/customer_list_screen.dart';
@@ -65,6 +66,12 @@ RoleWorkspace franchiseWorkspace() => RoleWorkspace(
       Icons.inventory_2_outlined,
       (_) =>
           const WorkspacePage(title: 'Stock report', child: InventoryScreen()),
+    ),
+    WorkspaceAction(
+      'Download stock report',
+      'Save your current stock workbook for the weekly review',
+      Icons.download_outlined,
+      (_) => const ExportReportsScreen(franchiseOnly: true),
     ),
     WorkspaceAction(
       'Post a payment',

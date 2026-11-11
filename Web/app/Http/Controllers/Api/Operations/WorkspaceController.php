@@ -46,6 +46,17 @@ class WorkspaceController extends Controller
         $sales = Sale::query()->when($franchiseId, fn ($q) => $q->where('franchise_id', $franchiseId));
         $month = (clone $sales)->whereBetween('sale_date', [now()->startOfMonth(), now()->endOfMonth()]);
         $pending = $actor->isSalesHead() ? 'sales_head' : ($actor->isAdmin() ? 'admin' : 'warehouse');
+        $pendingRequests = OperationRequest::query();
+        if ($actor->isFinance()) {
+            $pendingRequests->where('user_id', '!=', $actor->id)->where(function ($query) {
+                $query->where(fn ($q) => $q->where('type', 'expense')->where('status', 'submitted'))
+                    ->orWhere(fn ($q) => $q->where('type', 'funds')->where('status', 'approved'));
+            });
+        } elseif ($actor->isAdmin()) {
+            $pendingRequests->where('user_id', '!=', $actor->id)->where('status', 'submitted')->whereIn('type', ['funds', 'travel']);
+        } else {
+            $pendingRequests->where('user_id', $actor->id)->where('status', 'submitted');
+        }
 
         return response()->json(['data' => [
             'greeting' => 'Good '.(now()->hour < 12 ? 'morning' : (now()->hour < 17 ? 'afternoon' : 'evening')).', '.$actor->name,
@@ -58,7 +69,7 @@ class WorkspaceController extends Controller
             'stock_value' => $actor->isFranchisePartner() ? FranchiseInventory::where('franchise_id', $franchiseId)->sum('total_value') : null,
             'overdue_orders' => $due->map(fn ($order) => ['id' => $order->id, 'number' => $order->order_number, 'amount' => $order->balance_due, 'days' => (int) $order->received_at->diffInDays(now()), 'due_at' => $order->received_at->copy()->addDays(15)->toDateString()]),
             'pending_order_reviews' => ($actor->isAdmin() || $actor->isSalesHead() || $actor->isWarehouse()) ? (clone $orders)->where('review_stage', $pending)->count() : 0,
-            'pending_requests' => ($actor->isAdmin() || $actor->isFinance()) ? OperationRequest::whereIn('status', $actor->isFinance() ? ['submitted', 'approved'] : ['submitted'])->whereIn('type', $actor->isFinance() ? ['expense', 'funds'] : ['funds', 'travel'])->count() : OperationRequest::where('user_id', $actor->id)->where('status', 'submitted')->count(),
+            'pending_requests' => $pendingRequests->count(),
             'achievements' => TargetProgressService::summary($actor),
             'updated_at' => now()->toIso8601String(),
         ]]);

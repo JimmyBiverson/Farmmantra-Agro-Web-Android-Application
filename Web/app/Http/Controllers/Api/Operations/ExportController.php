@@ -16,12 +16,14 @@ class ExportController extends Controller
 {
     public function download(Request $request): BinaryFileResponse
     {
-        abort_unless($request->user()->isAdmin() || $request->user()->isFinance() || $request->user()->isSalesHead(), 403);
+        $actor = $request->user();
+        abort_unless($actor->isAdmin() || $actor->isFinance() || $actor->isSalesHead() || $actor->isFranchisePartner(), 403);
         $data = $request->validate(['report' => ['required', Rule::in(['warehouse', 'franchise_stock', 'outstanding', 'sales', 'expenses'])], 'from' => 'nullable|date', 'to' => 'nullable|date|after_or_equal:from']);
         $type = $data['report'];
+        abort_if($actor->isFranchisePartner() && ($type !== 'franchise_stock' || ! $actor->franchise_id), 403);
         $rows = match ($type) {
             'warehouse' => WarehouseInventory::with('product')->get()->map(fn ($r) => ['Central warehouse', $r->product?->sku, $r->product?->name, $r->quantity, $r->product?->batch_number, $r->product?->manufactured_at, $r->product?->expires_at]),
-            'franchise_stock' => FranchiseInventory::with(['product', 'franchise'])->get()->map(fn ($r) => [$r->franchise?->name, $r->product?->sku, $r->product?->name, $r->quantity, $r->total_value, $r->product?->batch_number, $r->product?->expires_at]),
+            'franchise_stock' => FranchiseInventory::with(['product', 'franchise'])->when($actor->isFranchisePartner(), fn ($q) => $q->where('franchise_id', $actor->franchise_id))->get()->map(fn ($r) => [$r->franchise?->name, $r->product?->sku, $r->product?->name, $r->quantity, $r->total_value, $r->product?->batch_number, $r->product?->expires_at]),
             'outstanding' => Order::with('franchise')->whereNotNull('received_at')->whereRaw('COALESCE(received_amount, total_amount) > amount_paid')->get()->map(fn ($r) => [$r->franchise?->name, $r->order_number, $r->received_at->toDateString(), $r->received_at->copy()->addDays(15)->toDateString(), (int) $r->received_at->diffInDays(now()), $r->balance_due]),
             'sales' => Sale::with(['franchise', 'customer'])->when($data['from'] ?? null, fn ($q, $v) => $q->whereDate('sale_date', '>=', $v))->when($data['to'] ?? null, fn ($q, $v) => $q->whereDate('sale_date', '<=', $v))->get()->map(fn ($r) => [$r->sale_number, $r->franchise?->name, $r->customer?->name, $r->sale_date->toDateString(), $r->final_amount, $r->total_cost, round((float) $r->final_amount - (float) $r->total_cost, 2)]),
             default => OperationRequest::with('user')->where('type', 'expense')->when($data['from'] ?? null, fn ($q, $v) => $q->whereDate('entry_date', '>=', $v))->when($data['to'] ?? null, fn ($q, $v) => $q->whereDate('entry_date', '<=', $v))->get()->map(fn ($r) => [$r->number, $r->user?->name, $r->title, $r->entry_date->toDateString(), $r->amount, $r->status]),

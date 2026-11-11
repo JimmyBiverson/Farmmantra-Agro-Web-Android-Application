@@ -316,7 +316,8 @@ class _ZoneFormScreenState extends State<ZoneFormScreen> {
 }
 
 class ExportReportsScreen extends StatefulWidget {
-  const ExportReportsScreen({super.key});
+  const ExportReportsScreen({super.key, this.franchiseOnly = false});
+  final bool franchiseOnly;
   @override
   State<ExportReportsScreen> createState() => _ExportReportsScreenState();
 }
@@ -343,11 +344,13 @@ class _ExportReportsScreenState extends State<ExportReportsScreen> {
         ),
         const SizedBox(height: 24),
         for (final e in {
-          'warehouse': 'Central warehouse stock',
+          if (!widget.franchiseOnly) 'warehouse': 'Central warehouse stock',
           'franchise_stock': 'Franchise stock',
-          'outstanding': 'Outstanding balances & ageing',
-          'sales': 'Combined sales & margins',
-          'expenses': 'Expense register',
+          if (!widget.franchiseOnly) ...{
+            'outstanding': 'Outstanding balances & ageing',
+            'sales': 'Combined sales & margins',
+            'expenses': 'Expense register',
+          },
         }.entries)
           WorkspaceTile(
             title: e.value,

@@ -41,5 +41,6 @@ Web/bootstrap/cache/*.php
 /tmp/
 app/november-fixes.txt
 app/november-tests.txt
+app/november-audit-tests.txt
 app/november-analysis-results.txt
 app/november-format-results.txt

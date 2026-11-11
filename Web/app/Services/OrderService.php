@@ -312,6 +312,13 @@ class OrderService
 
         event(new OrderStatusChanged($order, 'approved', 'out_for_delivery'));
 
+        NotificationService::send(
+            User::where('is_active', true)->whereHas('role', fn ($q) => $q->where('name', 'System Administrator'))->pluck('id')->all(),
+            'Dispatched — '.$order->order_number,
+            'Warehouse dispatched '.$order->order_number.' by '.$label.($remarks ? ': '.$remarks : '.'),
+            'delivery', Order::class, $order->id, 'operations',
+        );
+
         return $order->fresh();
     }
 
@@ -340,6 +347,13 @@ class OrderService
             'franchise/orders/detail',
         );
         NotificationService::push($franchiseUsers, 'Order Delivered', 'Your order '.$order->order_number.' has arrived. Please accept it.', 'franchise/orders/detail');
+
+        NotificationService::send(
+            User::where('is_active', true)->whereHas('role', fn ($q) => $q->where('name', 'System Administrator'))->pluck('id')->all(),
+            'Delivered — '.$order->order_number,
+            'Warehouse reported arrival of '.$order->order_number.'. Franchise acceptance is pending.',
+            'delivery', Order::class, $order->id, 'operations',
+        );
 
         event(new OrderStatusChanged($order, 'delivered', 'delivered'));
 

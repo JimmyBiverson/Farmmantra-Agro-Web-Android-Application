@@ -4,8 +4,23 @@ import 'package:farmmantra/widgets/common/workspace_bottom_bar.dart';
 import 'package:farmmantra/features/operations/presentation/workspace_ui.dart';
 import 'package:farmmantra/features/operations/presentation/knowledge_screen.dart';
 import 'package:farmmantra/core/theme/app_theme.dart';
+import 'package:farmmantra/features/operations/presentation/field_reports_screen.dart';
 
 void main() {
+  testWidgets('franchise reports expose only the branch stock download', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.lightTheme,
+        home: const ExportReportsScreen(franchiseOnly: true),
+      ),
+    );
+    expect(find.text('Franchise stock'), findsOneWidget);
+    expect(find.text('Central warehouse stock'), findsNothing);
+    expect(find.text('Combined sales & margins'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'bottom navigation remains accessible at narrow width and large text',
     (tester) async {
