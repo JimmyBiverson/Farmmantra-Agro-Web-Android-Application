@@ -257,4 +257,18 @@ class NovemberRequirementsTest extends TestCase
         $orderCounts = array_filter($queries, fn ($sql) => str_contains(strtolower($sql), 'count(*)') && str_contains(strtolower($sql), 'from "orders"'));
         $this->assertCount(1, $orderCounts, 'Layout partials must reuse request-scoped badge counts.');
     }
+
+    public function test_pending_order_upgrade_preserves_existing_approval_decisions(): void
+    {
+        $pending = $this->place();
+        $pending->update(['review_stage' => null]);
+        $accepted = $this->place();
+        $accepted->update(['status' => 'approved', 'approved_at' => now(), 'review_stage' => null]);
+        $migration = require database_path('migrations/2026_11_07_173641_queue_unreviewed_pending_orders.php');
+        $migration->up();
+        $this->assertSame('sales_head', $pending->fresh()->review_stage);
+        $this->assertNull($accepted->fresh()->review_stage);
+        $this->assertSame('approved', $accepted->fresh()->status);
+        $this->assertEquals(100, WarehouseInventory::first()->quantity);
+    }
 }

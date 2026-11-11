@@ -113,11 +113,11 @@ Debug APK output, when a build succeeds: `app/build/app/outputs/flutter-apk/app-
 
 ## Manual acceptance scenario still required
 
-Use a fresh test order: franchise accepts terms, places order, warehouse approves, warehouse dispatches with transport details, franchise reconciles and accepts quantities, franchise sells to an assigned retailer/farmer, franchise submits a partial payment, finance verifies then accepts, and both channels show the same stock and statement balance. Also check insufficient stock, repeat actions, cross-franchise access and deactivated accounts. Physical phone and actual FCM delivery are not yet verified.
+Use a fresh test order: franchise accepts terms, places order, Sales Head approves, Admin approves, warehouse accepts and dispatches with transport details, franchise reconciles and accepts quantities, franchise sells to an assigned retailer/farmer, franchise submits a partial payment, finance verifies then accepts, and both channels show the same stock and statement balance. Also check insufficient stock, repeat actions, cross-franchise access and deactivated accounts. Physical phone and actual FCM delivery are not yet verified.
 
 ## Production readiness
 
-Read IMPLEMENTATION.md before using real transactions. Critical remaining work includes exact-decimal financial calculations, robust idempotency/concurrent reference numbering, full accounting reconciliation, genuine XLSX/native PDF exports, complete notification delivery lifecycle, and deployment/security acceptance. The current work is a functioning local development milestone with a modern interface, not a completed commercial launch.
+Read IMPLEMENTATION.md before using real transactions. Critical remaining work includes exact-decimal financial calculations, robust idempotency/concurrent reference numbering, full accounting reconciliation, complete notification delivery lifecycle, and deployment/security acceptance. Native XLSX operations exports are now implemented. The current work is a functioning local development milestone with a modern interface, not a completed commercial launch.
 
 ### Android build result
 
@@ -136,3 +136,23 @@ flutter build apk --debug --target-platform android-arm64 --dart-define=API_BASE
 ```
 
 This debug APK targets ARM64 Android phones and the PC Wi-Fi address observed during setup. Start Laravel on `0.0.0.0:8000`, keep both devices on the same Wi-Fi network, and use the seeded franchise account. If the PC address changes, rebuild with its new address. This APK is for local testing; it is not a production release or an x86 emulator build.
+
+## Client operations setup — 11 November 2026
+
+Start local MySQL before running these commands from Web:
+
+```powershell
+php artisan migrate --no-interaction
+php artisan db:seed --class=ClientRolesSeeder --no-interaction
+php artisan schedule:work
+```
+
+The role seeder always installs the new roles. Demo accounts are created only with local APP_ENV, enabled DEMO_DATA and a configured DEMO_PASSWORD in the ignored environment file. New account emails are saleshead@farmmantra.co.ug and agronomist@farmmantra.co.ug; their password comes from DEMO_PASSWORD. Existing accounts are unchanged.
+
+Daily operational alerts are scheduled at 08:00 Africa/Kampala. In production, configure the standard once-per-minute Laravel schedule:run cron and the existing queue worker. Firebase/SMS configuration remains deferred. Admin can configure targets, field zones and draft knowledge through /workspace. Publish only client-approved crop guidance and actual product photographs.
+
+Role-specific mobile entry/configuration files are in app/lib/screens/admin, sales_head, agronomist, warehouse, franchise and finance. Shared request, return, knowledge, target and field-report screens live in app/lib/features/operations; edit those for shared behavior.
+
+The earlier IP addresses above describe historical builds. The API endpoint is configured in app/lib/core/constants/api_endpoints.dart and can be overridden with --dart-define=API_BASE_URL when building. The latest local ARM64 APK preserves the workspace's existing default endpoint (192.168.1.10:8000/api/v1); that local endpoint edit is intentionally not committed. Use your PC's current reachable LAN address for phone testing. Output: app/build/app/outputs/flutter-apk/app-debug.apk.
+
+On 11 November MySQL was stopped, so rerun migrations after starting it. Local database migration status and physical Android GPS/download acceptance must be checked before demonstrating live transactions.

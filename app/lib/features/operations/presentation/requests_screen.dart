@@ -296,6 +296,9 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
     if (['expense', 'funds', 'travel', 'budget'].contains(widget.initialType)) {
       type = widget.initialType!;
     }
+    week = DateUtils.dateOnly(date).add(
+      Duration(days: (DateTime.sunday - date.weekday) % DateTime.daysPerWeek),
+    );
     _loadFunds();
   }
 

@@ -105,6 +105,7 @@ class DashboardDataSeeder extends Seeder
                     'franchise_id' => $franchise->id,
                     'ordered_by' => $franchise->users()->first()?->id ?? $staff->id,
                     'status' => $status,
+                    'review_stage' => $status === 'pending' ? 'sales_head' : null,
                     'total_amount' => 0,
                     'notes' => null,
                     'expected_delivery_date' => $createdAt->copy()->addDays(rand(3, 10)),
