@@ -48,4 +48,17 @@ class ProductImageDeliveryTest extends TestCase
             $this->get('/product-asset/'.$path)->assertNotFound();
         }
     }
+
+    public function test_public_media_fallback_serves_uploads_but_not_private_documents(): void
+    {
+        Storage::fake('public');
+        foreach (['avatars', 'slides', 'news', 'categories', 'knowledge', 'site', 'settings'] as $folder) {
+            $path = UploadedFile::fake()->image('photo.png')->store($folder, 'public');
+            $this->get('/storage/'.$path)->assertOk()->assertHeader('X-Content-Type-Options', 'nosniff');
+        }
+        Storage::disk('public')->put('payment-proofs/private.png', 'private');
+        $this->get('/storage/payment-proofs/private.png')->assertForbidden();
+        $this->get('/storage/site/../payment-proofs/private.png')->assertForbidden();
+        $this->get('/site-asset/site/../payment-proofs/private.png')->assertNotFound();
+    }
 }

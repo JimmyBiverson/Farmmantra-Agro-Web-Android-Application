@@ -20,7 +20,7 @@ use Illuminate\Support\Facades\Storage;
 Route::get('/site-asset/{path}', function (string $path) {
     $disk = Storage::disk('public');
 
-    abort_unless(str_starts_with($path, 'site/') && $disk->exists($path), 404);
+    abort_unless(preg_match('~^site/[A-Za-z0-9_-]+\.(?:jpg|jpeg|png|webp|ico)$~i', $path) && $disk->exists($path), 404);
 
     return response()->file($disk->path($path), [
         'Content-Type' => mime_content_type($disk->path($path)) ?: 'application/octet-stream',
@@ -29,6 +29,20 @@ Route::get('/site-asset/{path}', function (string $path) {
 })->where('path', '.*')->name('site.asset');
 
 Route::get('/', fn () => redirect()->route('web.dashboard'));
+
+// Fallback for hosts without a working public/storage symlink. Private uploads
+// deliberately remain behind their existing authenticated/signed endpoints.
+Route::get('/storage/{folder}/{file}', function (string $folder, string $file) {
+    $path = $folder.'/'.$file;
+    abort_unless(preg_match('~^(?:products|avatars|slides|news|categories|knowledge|site|settings)/[A-Za-z0-9_-]+\.(?:jpg|jpeg|png|webp|gif|ico)$~i', $path), 404);
+    $disk = Storage::disk('public');
+    abort_unless($disk->exists($path), 404);
+
+    return response()->file($disk->path($path), [
+        'Cache-Control' => 'public, max-age=3600',
+        'X-Content-Type-Options' => 'nosniff',
+    ]);
+})->where(['folder' => '[A-Za-z]+', 'file' => '[A-Za-z0-9_.-]+'])->name('public.upload');
 
 // Public product photographs work even when hosting does not provide a storage symlink.
 Route::get('/product-asset/{path}', function (string $path) {

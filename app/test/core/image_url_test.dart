@@ -4,10 +4,10 @@ import 'package:farmmantra/core/utils/image_url.dart';
 
 void main() {
   group('resolveImageUrl', () {
-    test('returns external URLs rewritten to base host for local dev', () {
+    test('preserves external media and rewrites localhost for devices', () {
       expect(
         resolveImageUrl('https://cdn.example.com/p.png'),
-        '${Uri.parse(ApiEndpoints.baseUrl).origin}/p.png',
+        'https://cdn.example.com/p.png',
       );
       expect(
         resolveImageUrl('http://localhost/x.png'),
@@ -33,6 +33,19 @@ void main() {
       expect(resolveImageUrl(null), '');
       expect(resolveImageUrl(''), '');
       expect(resolveImageUrl('   '), '');
+    });
+
+    test('preserves public media route paths', () {
+      for (final path in [
+        'site-asset/site/logo.png',
+        'product-asset/products/photo.png',
+        'images/farmmantra-icon.png',
+      ]) {
+        expect(
+          resolveImageUrl('/$path'),
+          '${Uri.parse(ApiEndpoints.baseUrl).origin}/$path',
+        );
+      }
     });
   });
 }

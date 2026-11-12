@@ -22,8 +22,7 @@ String resolveImageUrl(dynamic raw) {
           valUri.host == '127.0.0.1' ||
           valUri.host.endsWith('.test') ||
           valUri.host.endsWith('.local') ||
-          valUri.path.contains('/storage/') ||
-          valUri.host != baseUri.host;
+          valUri.host == baseUri.host;
 
       if (isLocalOrDev) {
         final newPortStr = baseUri.hasPort ? ':${baseUri.port}' : '';
@@ -38,6 +37,11 @@ String resolveImageUrl(dynamic raw) {
 
   // If it's a relative path
   String cleanPath = value.startsWith('/') ? value.substring(1) : value;
+  if (cleanPath.startsWith('site-asset/') ||
+      cleanPath.startsWith('product-asset/') ||
+      cleanPath.startsWith('images/')) {
+    return '$baseHost/$cleanPath';
+  }
   if (cleanPath.startsWith('storage/')) {
     cleanPath = cleanPath.substring(8);
   }

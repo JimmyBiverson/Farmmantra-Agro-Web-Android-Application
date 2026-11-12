@@ -8,6 +8,16 @@ through Admin no longer require a public storage symlink to display. Gallery-onl
 products use the first gallery photo as their thumbnail. Flutter uses the API's
 delivery URLs instead of reconstructing URLs from upload paths.
 
+Public avatars, slides, news, categories, knowledge and branding also have a
+restricted `/storage/{folder}/{file}` fallback when requests reach Laravel.
+Keep the storage symlink on Nginx/CloudPanel installations that serve image
+extensions directly. External CDN image URLs are preserved by Flutter. Private
+receipts and payment proofs continue using their protected endpoints.
+
+Verification: 9 Laravel media/branding/private-proof tests (89 assertions) and
+21 Flutter image URL/product/branding tests passed on 12 November 2026. This
+verifies those flows, not every user upload workflow or the server configuration.
+
 For the existing server, extract `tmp/branding-deploy/farmmantra-branding-products-20261112.zip`
 into the Laravel project root (beside `artisan`, not inside `public`). Back up
 the corresponding files first. This is a patch for the existing installation,
