@@ -2,6 +2,33 @@
 
 ## Branding and product-photo update — 12 November 2026
 
+### Verified live CloudPanel routing fix
+
+CloudPanel's default static-extension location intercepted `.jpg` requests to
+Laravel's `/product-asset/` and `/site-asset/` routes and returned an Nginx 404.
+The live Vhost static location was changed from `^.+\.(css|...)$` to:
+
+```nginx
+location ~* ^/(?!product-asset/|site-asset/|storage/).+\.(css|js|jpg|jpeg|gif|png|ico|gz|svg|svgz|ttf|otf|woff|woff2|eot|mp4|ogg|ogv|webm|webp|zip|swf|map|mjs)$ {
+    add_header Access-Control-Allow-Origin "*";
+    add_header alt-svc 'h3=":443"; ma=86400';
+    expires max;
+    access_log off;
+}
+```
+
+Keep the existing `location /` proxy and PHP backend blocks. The excluded media
+paths then reach Laravel through the existing proxy. This is server configuration;
+uploading PHP files does not apply it. CloudPanel saves and validates the Vhost.
+
+Live Chrome verification: Neem Oil Extract primary and gallery photos both
+decoded at 447px width; the Admin gallery preview displayed on a fresh page.
+The server's active `storage/app/public/products` directory contained only those
+two files. Roundup, Thunder and Ridomil referenced missing original files; those
+must be restored from a media backup or uploaded again. Database records and Git
+source uploads alone do not include product photographs. Retain uploaded media
+on every deployment. After correcting cached image failures, reopen the page.
+
 The local source includes Admin site logo, favicon and app artwork settings, plus
 product-photo delivery at `/product-asset/products/...`. Product photos uploaded
 through Admin no longer require a public storage symlink to display. Gallery-only
