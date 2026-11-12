@@ -452,7 +452,7 @@ class HttpApiService implements ApiService {
       for (final imgItem in p['images']) {
         if (imgItem is Map) {
           final path =
-              imgItem['image_path'] ?? imgItem['image_url'] ?? imgItem['url'];
+              imgItem['image_url'] ?? imgItem['url'] ?? imgItem['image_path'];
           if (path != null) {
             final resolved = resolveImageUrl(path);
             if (resolved.isNotEmpty && !extractedUrls.contains(resolved)) {

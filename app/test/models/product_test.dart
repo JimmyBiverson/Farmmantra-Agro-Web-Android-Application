@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:farmmantra/models/product.dart';
+import 'package:farmmantra/core/constants/api_endpoints.dart';
 
 void main() {
   group('ProductCategory', () {
@@ -33,6 +34,23 @@ void main() {
   });
 
   group('Product', () {
+    test('uses backend delivery URLs instead of raw upload paths', () {
+      final origin = Uri.parse(ApiEndpoints.baseUrl).origin;
+      final image = '$origin/product-asset/products/cover.png';
+      final gallery = '$origin/product-asset/products/gallery.png';
+      final product = Product.fromJson({
+        'image': 'products/cover.png',
+        'image_url': image,
+        'images': [
+          {'image_path': 'products/gallery.png', 'image_url': gallery},
+        ],
+        'all_images': [image, gallery],
+      });
+      expect(product.imageUrl, image);
+      expect(product.imageUrls.toSet(), {image, gallery});
+      expect(product.imageUrls.length, 2);
+    });
+
     final product = Product(
       id: '1',
       name: 'Roundup',

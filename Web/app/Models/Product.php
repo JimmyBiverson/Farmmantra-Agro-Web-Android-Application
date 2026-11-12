@@ -101,7 +101,7 @@ class Product extends Model
     public function getImageUrlAttribute(): ?string
     {
         if (empty($this->image)) {
-            return null;
+            return $this->images->first()?->image_url;
         }
 
         if (filter_var($this->image, FILTER_VALIDATE_URL)) {
@@ -113,7 +113,9 @@ class Product extends Model
             $cleanPath = substr($cleanPath, 8);
         }
 
-        return url('storage/'.$cleanPath);
+        return str_starts_with($cleanPath, 'products/')
+            ? route('product.asset', ['path' => $cleanPath])
+            : url('storage/'.$cleanPath);
     }
 
     public function getAllImagesAttribute(): array

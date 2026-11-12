@@ -89,7 +89,7 @@ class Product {
   factory Product.fromJson(Map<String, dynamic> json) {
     final category = json['category'];
 
-    final rawSingleImg = json['image'] ?? json['image_url'];
+    final rawSingleImg = json['image_url'] ?? json['image'];
     final mainImg = rawSingleImg != null ? resolveImageUrl(rawSingleImg) : null;
 
     final List<String> extractedUrls = [];
@@ -98,7 +98,7 @@ class Product {
       for (final imgItem in json['images']) {
         if (imgItem is Map) {
           final path =
-              imgItem['image_path'] ?? imgItem['image_url'] ?? imgItem['url'];
+              imgItem['image_url'] ?? imgItem['url'] ?? imgItem['image_path'];
           if (path != null) {
             final resolved = resolveImageUrl(path);
             if (resolved.isNotEmpty && !extractedUrls.contains(resolved)) {

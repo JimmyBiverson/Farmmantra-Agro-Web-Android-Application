@@ -37,6 +37,8 @@ class ProductImage extends Model
             $cleanPath = substr($cleanPath, 8);
         }
 
-        return url('storage/'.$cleanPath);
+        return str_starts_with($cleanPath, 'products/')
+            ? route('product.asset', ['path' => $cleanPath])
+            : url('storage/'.$cleanPath);
     }
 }

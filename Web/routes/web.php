@@ -30,6 +30,18 @@ Route::get('/site-asset/{path}', function (string $path) {
 
 Route::get('/', fn () => redirect()->route('web.dashboard'));
 
+// Public product photographs work even when hosting does not provide a storage symlink.
+Route::get('/product-asset/{path}', function (string $path) {
+    abort_unless(preg_match('~^products/[A-Za-z0-9_-]+\.(?:jpg|jpeg|png|webp)$~i', $path), 404);
+    $disk = Storage::disk('public');
+    abort_unless($disk->exists($path), 404);
+
+    return response()->file($disk->path($path), [
+        'Cache-Control' => 'public, max-age=31536000, immutable',
+        'X-Content-Type-Options' => 'nosniff',
+    ]);
+})->where('path', '.*')->name('product.asset');
+
 Route::get('/login', [WebController::class, 'showLogin'])->name('login');
 Route::post('/login', [WebController::class, 'login'])->name('web.login.submit')->middleware('throttle:10,1');
 

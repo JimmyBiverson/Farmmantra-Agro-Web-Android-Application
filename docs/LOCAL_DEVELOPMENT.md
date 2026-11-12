@@ -1,5 +1,40 @@
 # Local development and testing
 
+## Branding and product-photo update — 12 November 2026
+
+The local source includes Admin site logo, favicon and app artwork settings, plus
+product-photo delivery at `/product-asset/products/...`. Product photos uploaded
+through Admin no longer require a public storage symlink to display. Gallery-only
+products use the first gallery photo as their thumbnail. Flutter uses the API's
+delivery URLs instead of reconstructing URLs from upload paths.
+
+For the existing server, extract `tmp/branding-deploy/farmmantra-branding-products-20261112.zip`
+into the Laravel project root (beside `artisan`, not inside `public`). Back up
+the corresponding files first. This is a patch for the existing installation,
+not a complete fresh-install archive. Keep the server `.env`, database and
+`storage/app/public` uploads. Local uploaded images are not Git files; if moving
+local product records to a new installation, copy their matching uploaded files too.
+
+After uploading, run from the server Laravel root:
+
+```sh
+php artisan optimize:clear
+php artisan storage:link
+php artisan queue:restart
+```
+
+Use the real HTTPS domain for `APP_URL` in the server environment. Test a new
+Admin product upload and open its image on the catalog. The Android source changes
+require a new APK; uploading PHP alone does not update an installed Android app:
+
+```sh
+flutter build apk --release --dart-define=API_BASE_URL=https://farmmantra.duckdns.org/api/v1
+```
+
+Configure release signing before distributing a production APK. Admin artwork
+changes refresh in-app branding; changing the installed launcher icon requires
+regenerating launcher assets using `app/tool/branding.ps1` and rebuilding/installing.
+
 ## Current workspace
 
 Backend: `C:/laragon/www/Farmmatra App new/Web` (Laravel 13, PHP 8.5).
