@@ -217,10 +217,9 @@ class HttpApiService implements ApiService {
   @override
   Future<Map<String, dynamic>> getSiteSettings() async {
     final uri = Uri.parse('${ApiEndpoints.baseUrl}/settings/public');
-    final response = await _client.get(
-      uri,
-      headers: {'Accept': 'application/json'},
-    );
+    final response = await _client
+        .get(uri, headers: {'Accept': 'application/json'})
+        .timeout(const Duration(seconds: 15));
     final body = _handleResponse(response);
     return _extractOne(body);
   }

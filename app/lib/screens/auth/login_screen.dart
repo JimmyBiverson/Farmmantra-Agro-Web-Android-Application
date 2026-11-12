@@ -1,3 +1,4 @@
+import '../../widgets/common/brand_identity.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -79,45 +80,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: AppColors.accentGold,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: const Icon(
-                              Icons.eco_rounded,
-                              color: AppColors.primaryGreenDark,
-                              size: 27,
-                            ),
-                          ),
-                          const SizedBox(width: 13),
-                          const Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Farmmantra',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -.7,
-                                ),
-                              ),
-                              Text(
-                                'AGRO CHEMICALS LIMITED',
-                                style: TextStyle(
-                                  color: Colors.white60,
-                                  fontSize: 8,
-                                  letterSpacing: 1.9,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                      const BrandIdentity(light: true),
                       const SizedBox(height: 36),
                       const Text(
                         'ROOTED IN PARTNERSHIP',

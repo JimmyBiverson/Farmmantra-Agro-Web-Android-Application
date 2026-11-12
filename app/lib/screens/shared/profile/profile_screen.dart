@@ -1,5 +1,6 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import '../../../widgets/common/brand_identity.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../core/constants/app_constants.dart';
@@ -251,6 +252,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       child: Column(
         children: [
           _buildHeader(user),
+          const SizedBox(height: 20),
+          const BrandIdentity(),
           const SizedBox(height: 16),
           _buildContactCard(user),
           const SizedBox(height: 16),

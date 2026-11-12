@@ -23,7 +23,7 @@ class SiteSettingsProvider extends ChangeNotifier {
   String get primaryColor => _settings.primaryColor;
 
   Future<void> loadSettings() async {
-    if (_loaded) return;
+    if (_loaded || _isLoading) return;
     _isLoading = true;
     notifyListeners();
 

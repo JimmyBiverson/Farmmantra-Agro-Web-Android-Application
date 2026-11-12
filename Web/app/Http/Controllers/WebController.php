@@ -486,8 +486,9 @@ class WebController extends Controller
             'site_phone' => 'nullable|string|max:30',
             'site_email' => 'nullable|email|max:255',
             'site_address' => 'nullable|string|max:500',
-            'site_favicon' => 'nullable|image|mimes:ico,png,jpeg,jpg,webp,svg|max:1024',
-            'site_logo' => 'nullable|image|mimes:png,jpeg,jpg,webp,svg|max:2048',
+            'site_favicon' => 'nullable|image|mimes:png,jpeg,jpg,webp|max:1024',
+            'site_logo' => 'nullable|image|mimes:png,jpeg,jpg,webp|max:2048',
+            'app_icon' => 'nullable|image|mimes:png|max:2048|dimensions:min_width=512,min_height=512,ratio=1',
             'og_image' => 'nullable|image|mimes:png,jpeg,jpg,webp|max:2048',
             'theme_accent' => 'nullable|string|max:7',
             'theme_success' => 'nullable|string|max:7',
@@ -508,6 +509,10 @@ class WebController extends Controller
             if ($request->has($field)) {
                 Setting::set($field, $request->input($field, ''), 'theme');
             }
+        }
+
+        if ($request->hasFile('app_icon')) {
+            Setting::set('app_icon', $request->file('app_icon')->store('site', 'public'), 'site');
         }
 
         if ($request->hasFile('site_favicon')) {

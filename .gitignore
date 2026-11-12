@@ -39,6 +39,7 @@ Web/bootstrap/cache/*.php
 **/.kotlin/
 
 /tmp/
+/credentials.txt
 app/november-fixes.txt
 app/november-tests.txt
 app/november-audit-tests.txt

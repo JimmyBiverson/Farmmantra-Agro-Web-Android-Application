@@ -32,7 +32,7 @@ class AppServiceProvider extends ServiceProvider
 
             try {
                 $site = cache()->remember('site_settings', 3600, function () {
-                    $keys = ['site_name', 'site_tagline', 'site_favicon', 'site_logo', 'og_image', 'site_phone', 'site_email', 'site_address',
+                    $keys = ['site_name', 'site_tagline', 'site_favicon', 'site_logo', 'app_icon', 'og_image', 'site_phone', 'site_email', 'site_address',
                         'theme_accent', 'theme_success', 'theme_warning', 'theme_danger', 'theme_info'];
 
                     return Setting::whereIn('key', $keys)->pluck('value', 'key')->toArray();
@@ -41,13 +41,16 @@ class AppServiceProvider extends ServiceProvider
                 $site = [];
             }
 
-            foreach (['site_logo', 'site_favicon', 'og_image'] as $assetKey) {
+            foreach (['site_logo', 'site_favicon', 'app_icon', 'og_image'] as $assetKey) {
                 if (! empty($site[$assetKey]) && Storage::disk('public')->exists($site[$assetKey])) {
                     $version = Storage::disk('public')->lastModified($site[$assetKey]);
                     $site[$assetKey.'_url'] = route('site.asset', ['path' => $site[$assetKey]]).'?v='.$version;
                 }
             }
 
+            foreach (['site_logo', 'site_favicon', 'app_icon'] as $assetKey) {
+                $site[$assetKey.'_url'] ??= asset('images/farmmantra-icon.png');
+            }
             $view->with('site', $site);
 
             try {

@@ -63,7 +63,7 @@
                             </div>
                             <div>
                                 <p class="text-xs mb-0.5" style="color:var(--text-muted)">Current logo</p>
-                                <p class="text-[10px]" style="color:var(--text-secondary)">200×60px · PNG/SVG/WebP</p>
+                                <p class="text-[10px]" style="color:var(--text-secondary)">200×60px · PNG/JPEG/WebP</p>
                             </div>
                         </div>
                         <label class="block cursor-pointer">
@@ -82,7 +82,7 @@
                                     </div>
                                 </template>
                             </div>
-                            <input type="file" name="site_logo" accept="image/png,jpeg,jpg,webp,svg" class="hidden" @change="logoPreview = URL.createObjectURL(event.target.files[0]); logoName = event.target.files[0].name">
+                            <input type="file" name="site_logo" accept="image/png,image/jpeg,image/webp" class="hidden" @change="logoPreview = URL.createObjectURL(event.target.files[0]); logoName = event.target.files[0].name">
                         </label>
                     </div>
 
@@ -101,7 +101,7 @@
                             </div>
                             <div>
                                 <p class="text-xs mb-0.5" style="color:var(--text-muted)">Current favicon</p>
-                                <p class="text-[10px]" style="color:var(--text-secondary)">32×32px · ICO/PNG</p>
+                                <p class="text-[10px]" style="color:var(--text-secondary)">32×32px · PNG/JPEG/WebP</p>
                             </div>
                         </div>
                         <label class="block cursor-pointer">
@@ -120,8 +120,17 @@
                                     </div>
                                 </template>
                             </div>
-                            <input type="file" name="site_favicon" accept="image/x-icon,image/png,image/jpeg,image/webp" class="hidden" @change="faviconPreview = URL.createObjectURL(event.target.files[0]); faviconName = event.target.files[0].name">
+                            <input type="file" name="site_favicon" accept="image/png,image/jpeg,image/webp" class="hidden" @change="faviconPreview = URL.createObjectURL(event.target.files[0]); faviconName = event.target.files[0].name">
                         </label>
+                    </div>
+
+                    <div class="rounded-xl p-5 border" style="border-color:var(--border-color);background:var(--bg-card)">
+                        <label for="app_icon" class="block text-xs font-semibold mb-3">Android app icon</label>
+                        <img src="{{ $site['app_icon_url'] }}" alt="Current app icon" class="h-20 w-20 rounded-2xl mb-4" style="object-fit:contain">
+                        <input id="app_icon" type="file" name="app_icon" accept="image/png" class="block w-full text-sm">
+                        <p class="text-xs mt-3" style="color:var(--text-secondary)">Square PNG, at least 512 × 512 pixels, up to 2 MB. Use a simple mark with space around its edges.</p>
+                        <p class="text-xs mt-2" style="color:var(--text-secondary)">Your saved logo and app icon appear inside the app on its next refresh. Changing the Android home-screen launcher icon requires a new APK build and installation.</p>
+                        <a href="{{ $site['app_icon_url'] }}" download="farmmantra-launcher.png" class="inline-block mt-3 text-sm font-semibold">Download current icon for the next app build</a>
                     </div>
 
                     {{-- OG / Social Sharing Image --}}

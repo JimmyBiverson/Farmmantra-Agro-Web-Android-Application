@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
 {
@@ -41,8 +40,11 @@ class SettingsController extends Controller
         $settings['favicon_url'] = $this->publicAssetUrl(
             Setting::get('site_favicon') ?: Setting::get('favicon_url')
         );
+        $settings['app_icon_url'] = $this->publicAssetUrl(Setting::get('app_icon')) ?: asset('images/farmmantra-icon.png');
+        $settings['logo_url'] ??= asset('images/farmmantra-icon.png');
+        $settings['favicon_url'] ??= asset('images/farmmantra-icon.png');
 
-        return response()->json(['data' => $settings]);
+        return response()->json(['data' => $settings])->header('Cache-Control', 'no-store');
     }
 
     private function publicAssetUrl(?string $value): ?string
@@ -59,7 +61,7 @@ class SettingsController extends Controller
             return route('site.asset', ['path' => $value]);
         }
 
-        return url('/storage/'.ltrim($value, '/'));
+        return url(str_starts_with($value, '/storage/') ? $value : '/storage/'.ltrim($value, '/'));
     }
 
     /**
@@ -90,6 +92,7 @@ class SettingsController extends Controller
             $group = $this->resolveGroup($key);
             Setting::set($key, $value, $group);
         }
+        cache()->forget('site_settings');
 
         return response()->json(['message' => 'Settings saved.', 'data' => $request->settings]);
     }
@@ -100,15 +103,21 @@ class SettingsController extends Controller
     public function uploadImage(Request $request): JsonResponse
     {
         $request->validate([
-            'type' => 'required|in:logo,favicon',
-            'image' => 'required|image|mimes:png,jpg,jpeg,svg,ico|max:2048',
+            'type' => 'required|in:logo,favicon,app_icon',
+            'image' => 'required|image|mimes:png,jpg,jpeg,webp|max:2048',
         ]);
+        if ($request->type === 'app_icon') {
+            $request->validate(['image' => 'mimes:png|dimensions:min_width=512,min_height=512,ratio=1']);
+        }
 
         $type = $request->type;
-        $path = $request->file('image')->store("settings/{$type}", 'public');
-        $url = Storage::url($path);
+        $path = $request->file('image')->store('site', 'public');
+        $url = $this->publicAssetUrl($path);
 
-        Setting::set("{$type}_url", $url, 'branding');
+        Setting::set(match ($type) {
+            'logo' => 'site_logo', 'favicon' => 'site_favicon', default => 'app_icon'
+        }, $path, 'site');
+        cache()->forget('site_settings');
 
         return response()->json([
             'message' => ucfirst($type).' uploaded successfully.',

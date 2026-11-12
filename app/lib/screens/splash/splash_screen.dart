@@ -1,3 +1,4 @@
+import '../../widgets/common/brand_identity.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/theme/app_colors.dart';
@@ -62,37 +63,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: Column(
                 children: [
                   const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.all(22),
-                    decoration: BoxDecoration(
-                      color: AppColors.accentGold,
-                      borderRadius: BorderRadius.circular(27),
-                    ),
-                    child: const Icon(
-                      Icons.eco_rounded,
-                      size: 54,
-                      color: AppColors.primaryGreenDark,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Farmmantra',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 37,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -1.2,
-                    ),
-                  ),
-                  const SizedBox(height: 9),
-                  const Text(
-                    'AGRO CHEMICALS LIMITED',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 10,
-                      letterSpacing: 2.4,
-                    ),
-                  ),
+                  const BrandIdentity(size: 86, light: true, useAppIcon: true),
                   const SizedBox(height: 28),
                   const Text(
                     'Growing together. Every day.',

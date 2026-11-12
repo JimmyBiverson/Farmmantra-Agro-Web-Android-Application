@@ -1,4 +1,6 @@
 import 'features/operations/presentation/operations_home.dart';
+import 'dart:async';
+import 'providers/site_settings_provider.dart';
 import 'features/operations/presentation/returns_screen.dart';
 import 'features/operations/presentation/requests_screen.dart';
 import 'screens/admin/admin_shell.dart';
@@ -30,8 +32,30 @@ class FarmmantraApp extends StatefulWidget {
   State<FarmmantraApp> createState() => _FarmmantraAppState();
 }
 
-class _FarmmantraAppState extends State<FarmmantraApp> {
+class _FarmmantraAppState extends State<FarmmantraApp>
+    with WidgetsBindingObserver {
   GoRouter? _router;
+  Timer? _brandingTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _brandingTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+        _refreshBranding();
+      }
+    });
+  }
+
+  void _refreshBranding() {
+    if (mounted) context.read<SiteSettingsProvider?>()?.reload();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _refreshBranding();
+  }
 
   String _home(AuthProvider auth) => switch (auth.userRole) {
     UserRole.franchisePartner => '/franchise/dashboard',
@@ -165,7 +189,7 @@ class _FarmmantraAppState extends State<FarmmantraApp> {
 
   @override
   Widget build(BuildContext context) => MaterialApp.router(
-    title: 'Farmmantra',
+    title: context.watch<SiteSettingsProvider?>()?.siteName ?? 'Farmmantra',
     debugShowCheckedModeBanner: false,
     theme: AppTheme.lightTheme,
     routerConfig: _router!,
@@ -173,6 +197,8 @@ class _FarmmantraAppState extends State<FarmmantraApp> {
 
   @override
   void dispose() {
+    _brandingTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     _router?.dispose();
     super.dispose();
   }

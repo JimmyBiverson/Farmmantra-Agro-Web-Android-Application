@@ -1,4 +1,5 @@
 import 'admin_data_screen.dart';
+import 'admin_branding_screen.dart';
 import 'package:flutter/material.dart';
 import '../../features/operations/presentation/role_workspace.dart';
 import '../../features/operations/presentation/requests_screen.dart';
@@ -11,6 +12,12 @@ RoleWorkspace adminWorkspace() => RoleWorkspace(
   'Admin workspace',
   'Lead the operation with a clear view of every approval.',
   [
+    WorkspaceAction(
+      'Brand identity',
+      'Manage site logo, favicon and app icon',
+      Icons.palette_outlined,
+      (_) => const AdminBrandingScreen(),
+    ),
     WorkspaceAction(
       'Products & prices',
       'Manage actual photos, batches, expiry and price tiers',

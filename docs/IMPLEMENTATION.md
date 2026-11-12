@@ -155,3 +155,13 @@ Re-read all three pages of the client's Points for App devlopment.pdf and checke
 Audit fixes: missing Southern zone, own-franchise Excel access, Finance actionable approval count, and Admin dispatch/arrival notifications. New regressions cover each. Run new migrations before acceptance; do not reset or reseed production data. Crop advice/photos, geofence assignments, scheduler/queue deployment, external notification credentials, release signing and physical-device testing are still prerequisites for a complete client launch.
 
 Fresh audit results: full Laravel suite passed 65 tests / 826 assertions; Pint passed; full Flutter suite passed 221 tests; Flutter analysis reported no issues; Vite production build passed; the updated Android ARM64 debug APK built successfully (assembleDebug 71.7 seconds). Output: app/build/app/outputs/flutter-apk/app-debug.apk. Local MySQL migration-status check still failed with connection refused at 127.0.0.1:3306, so the Southern-zone migration has been verified in isolated SQLite tests but not applied to local MySQL. Test logs are ignored development artifacts; executable regression tests are committed.
+
+### Shared branding and Android launcher (12 November 2026)
+- Web Admin: Settings > Site Settings > Branding now accepts a square PNG app icon (minimum 512 px, maximum 2 MB), alongside site logo and favicon uploads. Mobile Admin: Workspace > Brand identity exposes the same uploads.
+- Both upload paths use canonical site settings and clear the web settings cache. Public settings supply the same logo, favicon and app icon URLs. Flutter uses saved branding on login, splash and profile, refreshes on resume and every minute while active, and keeps a bundled fallback.
+- Android launcher artwork is compiled into the APK; changing an Admin upload cannot replace the launcher resource of an already installed app. To consume the latest Admin artwork, run from the repository root:
+  `powershell -ExecutionPolicy Bypass -File app/tool/branding.ps1 -ApiBase https://farmmantra.duckdns.org/api/v1`
+  Then from app run:
+  `flutter build apk --debug --target-platform android-arm64 --dart-define=API_BASE_URL=https://farmmantra.duckdns.org/api/v1`
+  Install the rebuilt APK. Production distribution still requires release signing. Omit ApiBase to regenerate the bundled original artwork, or supply SourcePng for a local approved square PNG.
+- Validation: 7 branding-related Laravel tests passed (65 assertions); Flutter analysis clean; all 223 Flutter tests passed, including branding refresh/offline/narrow-layout checks. No external dependencies added.
