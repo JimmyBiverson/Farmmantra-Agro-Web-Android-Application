@@ -1,5 +1,16 @@
 # Local development and testing
 
+## Phone connection fix — 13 November 2026
+
+Plain `flutter run` and `flutter build apk` now default to
+`https://farmmantra.duckdns.org/api/v1`. The old IP address with port 8000 was a
+development-server address, not the hosted CloudPanel HTTPS API. An explicit
+`--dart-define=API_BASE_URL=...` still overrides the default. Remove old overrides
+from your run command or IDE launch configuration when testing the hosted server.
+Stop the running app and run `flutter run` again; hot reload does not reliably
+replace a compiled endpoint constant. No Laravel source change or Web re-upload
+is required for this endpoint correction. Local/emulator overrides are shown below.
+
 ## Branding and product-photo update — 12 November 2026
 
 ### Verified live CloudPanel routing fix

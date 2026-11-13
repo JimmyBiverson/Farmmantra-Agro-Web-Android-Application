@@ -5,8 +5,45 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:farmmantra/core/exceptions/app_exception.dart';
 import 'package:farmmantra/services/api/http_api_service.dart';
+import 'package:farmmantra/core/constants/api_endpoints.dart';
 
 void main() {
+  test(
+    'login uses configured API and bearer token for subsequent requests',
+    () async {
+      final api = HttpApiService(
+        client: MockClient((request) async {
+          if (request.url.path.endsWith('/login')) {
+            expect(request.url.toString(), '${ApiEndpoints.baseUrl}/login');
+            expect(request.method, 'POST');
+            expect(jsonDecode(request.body), {
+              'email': 'test@example.com',
+              'password': 'test-password',
+            });
+            return http.Response(
+              jsonEncode({
+                'token': 'test-token',
+                'user': {'id': 1, 'name': 'Test', 'email': 'test@example.com'},
+              }),
+              200,
+            );
+          }
+          expect(request.url.toString(), '${ApiEndpoints.baseUrl}/me');
+          expect(request.headers['Authorization'], 'Bearer test-token');
+          return http.Response(
+            jsonEncode({
+              'user': {'id': 1, 'name': 'Test', 'email': 'test@example.com'},
+            }),
+            200,
+          );
+        }),
+      );
+      final login = await api.login('test@example.com', 'test-password');
+      api.setToken(login['token']);
+      final user = await api.getProfile();
+      expect(user.email, 'test@example.com');
+    },
+  );
   test('dashboard network failure does not fabricate zero totals', () async {
     final api = HttpApiService(
       client: MockClient((request) async {

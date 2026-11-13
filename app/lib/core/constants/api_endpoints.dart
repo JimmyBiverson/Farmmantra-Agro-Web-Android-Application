@@ -1,16 +1,17 @@
 class ApiEndpoints {
   ApiEndpoints._();
 
-  // Chrome/web:      http://localhost:8000/api
-  // Android emulator: http://10.0.2.2:8000/api
-  // Physical device:  http://<your-pc-ip>:8000/api
-  // Production:       https://farmmantra.duckdns.org/api
+  // Plain flutter run/build connects to the hosted Laravel HTTPS API.
+  // For local development, explicitly override API_BASE_URL:
+  // Chrome/web:       http://localhost:8000/api/v1
+  // Android emulator: http://10.0.2.2:8000/api/v1
+  // Physical device:  http://<your-pc-ip>:8000/api/v1
   //
   // To switch: change the value below, or use --dart-define=API_BASE_URL=...
   // from the command line when building.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.137.1:8000/api/v1',
+    defaultValue: 'https://farmmantra.duckdns.org/api/v1',
   );
 
   // Auth

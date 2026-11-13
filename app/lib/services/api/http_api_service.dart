@@ -93,11 +93,13 @@ class HttpApiService implements ApiService {
     Map<String, dynamic>? body,
   }) async {
     final uri = Uri.parse('${ApiEndpoints.baseUrl}$path');
-    final response = await _client.post(
-      uri,
-      headers: _headers,
-      body: body != null ? jsonEncode(body) : null,
-    );
+    final response = await _client
+        .post(
+          uri,
+          headers: _headers,
+          body: body != null ? jsonEncode(body) : null,
+        )
+        .timeout(const Duration(seconds: 20));
     return _handleResponse(response);
   }
 
