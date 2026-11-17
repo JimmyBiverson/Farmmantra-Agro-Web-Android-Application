@@ -802,6 +802,14 @@ class _StaffOrderDetailScreenState extends State<StaffOrderDetailScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const Text('Load by batch'),
+                for (final item in order.items.where(
+                  (item) => item.effectiveQuantity > 0,
+                ))
+                  Text(
+                    '${item.productName} × ${item.effectiveQuantity} · Batch ${item.batchNumber ?? "unrecorded"} · Expiry ${item.expiresAt ?? "unrecorded"}',
+                  ),
+                const SizedBox(height: 12),
                 Text('How is order ${order.displayOrderNumber} being sent?'),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(

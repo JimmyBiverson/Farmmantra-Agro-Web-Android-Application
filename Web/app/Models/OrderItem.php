@@ -17,6 +17,7 @@ class OrderItem extends Model
     ];
 
     protected $casts = [
+        'dispatch_lot' => 'array',
         'quantity' => 'decimal:2',
         'unit_price' => 'decimal:2',
         'base_unit_price' => 'decimal:2',

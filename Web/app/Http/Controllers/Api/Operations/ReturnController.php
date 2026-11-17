@@ -55,7 +55,7 @@ class ReturnController extends Controller
                 if (! $ordered || (float) $input['quantity'] + $already > $received) {
                     throw ValidationException::withMessages(['items' => 'The return quantity exceeds the unreturned quantity received on this order.']);
                 }
-                $lines[] = ['product_id' => $ordered->product_id, 'product_name' => $ordered->product->name, 'quantity' => (float) $input['quantity'], 'unit_price' => $ordered->unit_price, 'batch_number' => $ordered->product->batch_number, 'expires_at' => $ordered->product->expires_at];
+                $lines[] = ['product_id' => $ordered->product_id, 'product_name' => $ordered->product->name, 'quantity' => (float) $input['quantity'], 'unit_price' => $ordered->unit_price, 'batch_number' => $ordered->dispatch_lot['batch'] ?? null, 'expires_at' => $ordered->dispatch_lot['expiry'] ?? null];
             }
             $photos = array_map(fn ($photo) => $photo->store('return-photos', 'local'), $request->file('photos', []));
 

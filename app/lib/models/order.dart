@@ -320,6 +320,8 @@ class OrderItem {
   final String productName;
   final String categoryName;
   final String? imageUrl;
+  final String? batchNumber;
+  final String? expiresAt;
   final int quantity;
   final double unitPrice;
   final double baseUnitPrice;
@@ -335,6 +337,8 @@ class OrderItem {
     required this.productName,
     required this.categoryName,
     this.imageUrl,
+    this.batchNumber,
+    this.expiresAt,
     required this.quantity,
     required this.unitPrice,
     this.baseUnitPrice = 0,
@@ -359,6 +363,8 @@ class OrderItem {
       imageUrl: product is Map
           ? (product['image_url'] ?? product['image'] ?? json['image_url'])
           : json['image_url'],
+      batchNumber: product is Map ? product['batch_number']?.toString() : null,
+      expiresAt: product is Map ? product['expires_at']?.toString() : null,
       quantity: Order._toInt(json['quantity']),
       unitPrice: Order._toDouble(json['unit_price']),
       baseUnitPrice: Order._toDouble(

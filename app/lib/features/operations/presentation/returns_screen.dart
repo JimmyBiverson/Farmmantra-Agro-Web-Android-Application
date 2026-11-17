@@ -202,6 +202,8 @@ class _ReturnFormScreenState extends State<ReturnFormScreen> {
   final reason = TextEditingController(), transport = TextEditingController();
   final Map<String, TextEditingController> quantities = {};
   List<Map<String, dynamic>> orders = [];
+  int page = 0;
+  bool moreOrders = false;
   Map<String, dynamic>? order;
   List<OperationsFile> photos = [];
   bool loading = true, saving = false;
@@ -215,8 +217,17 @@ class _ReturnFormScreenState extends State<ReturnFormScreen> {
   Future<void> _load() async {
     final api = operationsApi(context);
     try {
-      final r = await api.get('operations/returns/eligible-orders');
-      if (mounted) setState(() => orders = OperationsApi.rows(r));
+      final response = await api.get(
+        'operations/returns/eligible-orders?page=${page + 1}',
+      );
+      if (!mounted) return;
+      setState(() {
+        final result = response['data'] as Map;
+        orders.addAll(OperationsApi.rows(response));
+        page = result['current_page'] as int;
+        moreOrders = page < (result['last_page'] as int);
+        error = null;
+      });
     } catch (e) {
       if (mounted) setState(() => error = operationError(e));
     } finally {
@@ -248,13 +259,26 @@ class _ReturnFormScreenState extends State<ReturnFormScreen> {
     });
   }
 
+  num _received(dynamic lineId) {
+    final rows = order?['stock_receipt']?['items'] as List? ?? [];
+    return rows
+        .where((row) => row['order_item_id'] == lineId)
+        .fold<num>(
+          0,
+          (sum, row) =>
+              sum + (num.tryParse(row['received_quantity'].toString()) ?? 0),
+        );
+  }
+
   @override
   Widget build(BuildContext context) => WorkspacePage(
     title: 'Request a return',
     child: loading
         ? const Center(child: CircularProgressIndicator())
         : error != null
-        ? Center(child: Text(error!))
+        ? Center(
+            child: TextButton(onPressed: _load, child: Text('$error · Retry')),
+          )
         : orders.isEmpty
         ? const WorkspaceEmpty(
             title: 'No received orders yet',
@@ -275,6 +299,7 @@ class _ReturnFormScreenState extends State<ReturnFormScreen> {
                 ),
                 const SizedBox(height: 22),
                 DropdownButtonFormField<String>(
+                  initialValue: order?['id']?.toString(),
                   isExpanded: true,
                   decoration: const InputDecoration(
                     labelText: 'Received order',
@@ -291,6 +316,16 @@ class _ReturnFormScreenState extends State<ReturnFormScreen> {
                   validator: (v) =>
                       v == null ? 'Choose a received order' : null,
                 ),
+                if (moreOrders)
+                  TextButton(
+                    onPressed: loading
+                        ? null
+                        : () {
+                            setState(() => loading = true);
+                            _load();
+                          },
+                    child: const Text('Load older received orders'),
+                  ),
                 if (order != null) ...[
                   const SizedBox(height: 16),
                   for (final item in order!['items'])
@@ -309,7 +344,7 @@ class _ReturnFormScreenState extends State<ReturnFormScreen> {
                               ),
                             ),
                             Text(
-                              '${Formatters.currency(item['unit_price'])} · Expiry ${item['product']?['expires_at'] ?? 'Not recorded'}',
+                              'Received: ${_received(item['id'])} · ${Formatters.currency(item['unit_price'])} · Batch ${item['dispatch_lot']?['batch'] ?? 'Not recorded'} · Expiry ${item['dispatch_lot']?['expiry'] ?? 'Not recorded'}',
                             ),
                             const SizedBox(height: 12),
                             TextFormField(

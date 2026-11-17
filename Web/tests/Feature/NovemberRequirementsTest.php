@@ -285,7 +285,10 @@ class NovemberRequirementsTest extends TestCase
             $this->postJson("/api/v1/operations/orders/$order->id/review", ['approve' => true, 'notes' => 'Reviewed'])->assertOk();
         }
         OrderService::approve($order->fresh(), $this->actors['warehouse'], today()->addDay()->toDateString());
+        $this->product->update(['batch_number' => 'LOT-A', 'expires_at' => '2029-04-01']);
         OrderService::dispatch($order->fresh(), $this->actors['warehouse'], 'truck', 'Driver delivery');
+        $this->product->update(['batch_number' => 'LOT-B']);
+        $this->assertSame('LOT-A', $order->items()->first()->dispatch_lot['batch']);
         OrderService::markDelivered($order->fresh(), $this->actors['warehouse']);
         foreach (['admin', 'franchise'] as $role) {
             $titles = $this->actors[$role]->notifications()->get()->pluck('data.title');

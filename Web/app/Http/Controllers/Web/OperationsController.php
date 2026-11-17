@@ -21,7 +21,7 @@ class OperationsController extends Controller
 
     public function orders(Request $request)
     {
-        $query = Order::with(['franchise:id,name,code', 'items.product:id,name', 'dispatchedByUser:id,name', 'approvedByUser:id,name'])
+        $query = Order::with(['franchise:id,name,code', 'items.product:id,name,batch_number,expires_at', 'dispatchedByUser:id,name', 'approvedByUser:id,name'])
             ->withCount(['acceptedPayments as payment_accepted_count']);
 
         if ($request->filled('status')) {

@@ -282,44 +282,53 @@ class OrderService
             }
         }
 
-        $signature = SignatureService::sign($actor, 'order_dispatched', $order, ['means' => $means, 'vehicle' => $vehicle]);
+        return DB::transaction(function () use ($order, $actor, $means, $vehicle, $remarks) {
+            $order = Order::lockForUpdate()->findOrFail($order->id);
+            if ($order->status !== 'approved' || in_array($order->delivery_status, ['out_for_delivery', 'delivered', 'confirmed'], true)) {
+                throw ValidationException::withMessages(['order' => 'The order is no longer awaiting dispatch.']);
+            }
+            foreach ($order->items()->with('product')->get() as $item) {
+                $item->forceFill(['dispatch_lot' => ['batch' => $item->product?->batch_number, 'expiry' => $item->product?->expires_at]])->save();
+            }
+            $signature = SignatureService::sign($actor, 'order_dispatched', $order, ['means' => $means, 'vehicle' => $vehicle]);
 
-        $order->update([
-            'delivery_status' => 'out_for_delivery',
-            'served_at' => now(),
-            'dispatched_by' => $actor->id,
-            'dispatched_at' => now(),
-            'dispatch_means' => $means,
-            'dispatch_vehicle' => $vehicle,
-            'dispatch_remarks' => $remarks,
-            'dispatch_signature' => $signature->signature_number,
-        ]);
+            $order->update([
+                'delivery_status' => 'out_for_delivery',
+                'served_at' => now(),
+                'dispatched_by' => $actor->id,
+                'dispatched_at' => now(),
+                'dispatch_means' => $means,
+                'dispatch_vehicle' => $vehicle,
+                'dispatch_remarks' => $remarks,
+                'dispatch_signature' => $signature->signature_number,
+            ]);
 
-        $label = Order::DISPATCH_MEANS[$means];
-        ActivityLogger::log('delivery_dispatched', "Order {$order->order_number} dispatched by {$label}", $order, $actor->id, [
-            'means' => $means, 'vehicle' => $vehicle, 'remarks' => $remarks, 'signature' => $signature->signature_number,
-        ]);
+            $label = Order::DISPATCH_MEANS[$means];
+            ActivityLogger::log('delivery_dispatched', "Order {$order->order_number} dispatched by {$label}", $order, $actor->id, [
+                'means' => $means, 'vehicle' => $vehicle, 'remarks' => $remarks, 'signature' => $signature->signature_number,
+            ]);
 
-        NotificationService::send(
-            self::franchiseUserIds($order->franchise_id),
-            'Dispatched — '.$order->order_number,
-            "Your order has been dispatched by {$label}".($vehicle ? " ({$vehicle})" : '').($remarks ? ". {$remarks}" : '').'. Please receive and accept it in the app.',
-            'delivery',
-            Order::class,
-            $order->id,
-            'franchise/orders/detail',
-        );
+            NotificationService::send(
+                self::franchiseUserIds($order->franchise_id),
+                'Dispatched — '.$order->order_number,
+                "Your order has been dispatched by {$label}".($vehicle ? " ({$vehicle})" : '').($remarks ? ". {$remarks}" : '').'. Please receive and accept it in the app.',
+                'delivery',
+                Order::class,
+                $order->id,
+                'franchise/orders/detail',
+            );
 
-        event(new OrderStatusChanged($order, 'approved', 'out_for_delivery'));
+            event(new OrderStatusChanged($order, 'approved', 'out_for_delivery'));
 
-        NotificationService::send(
-            User::where('is_active', true)->whereHas('role', fn ($q) => $q->where('name', 'System Administrator'))->pluck('id')->all(),
-            'Dispatched — '.$order->order_number,
-            'Warehouse dispatched '.$order->order_number.' by '.$label.($remarks ? ': '.$remarks : '.'),
-            'delivery', Order::class, $order->id, 'operations',
-        );
+            NotificationService::send(
+                User::where('is_active', true)->whereHas('role', fn ($q) => $q->where('name', 'System Administrator'))->pluck('id')->all(),
+                'Dispatched — '.$order->order_number,
+                'Warehouse dispatched '.$order->order_number.' by '.$label.($remarks ? ': '.$remarks : '.'),
+                'delivery', Order::class, $order->id, 'operations',
+            );
 
-        return $order->fresh();
+            return $order->fresh();
+        });
     }
 
     public static function markDelivered(Order $order, User $actor): Order

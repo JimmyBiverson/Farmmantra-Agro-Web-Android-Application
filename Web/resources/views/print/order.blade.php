@@ -14,13 +14,14 @@
 </div>
 @php $receiptItems = $order->stockReceipt?->items?->keyBy('order_item_id'); @endphp
 <table>
-    <thead><tr><th>#</th><th>Product</th><th>SKU</th><th class="num">Qty</th>@if($deliveryNote)<th class="num">Received</th><th>Notes</th>@else<th class="num">Unit price</th><th class="num">Amount</th>@endif</tr></thead>
+    <thead><tr><th>#</th><th>Product</th><th>SKU</th><th class="num">Qty</th>@if($deliveryNote)<th>Batch / expiry</th><th class="num">Received</th><th>Notes</th>@else<th class="num">Unit price</th><th class="num">Amount</th>@endif</tr></thead>
     <tbody>
     @foreach($order->items as $i => $item)
     <tr>
         <td>{{ $i + 1 }}</td><td>{{ $item->product?->name }}</td><td>{{ $item->product?->sku }}</td>
         <td class="num">{{ rtrim(rtrim(number_format((float) ($item->adjusted_quantity ?? $item->quantity), 2), '0'), '.') }}</td>
         @if($deliveryNote)
+        <td>{{ $item->dispatch_lot['batch'] ?? 'Unrecorded' }} / {{ $item->dispatch_lot['expiry'] ?? 'Unrecorded' }}</td>
         @php $ri = $receiptItems?->get($item->id); @endphp
         <td class="num">{{ $ri && $order->stockReceipt->status !== 'pending' ? rtrim(rtrim(number_format((float) $ri->received_quantity, 2), '0'), '.') : '' }}</td>
         <td>{{ $ri?->discrepancy_notes }}</td>

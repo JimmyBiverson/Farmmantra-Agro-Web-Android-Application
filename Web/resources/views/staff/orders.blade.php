@@ -136,6 +136,14 @@
                                     <summary class="fm-btn fm-btn-sm"><i class="fas fa-truck"></i> Dispatch</summary>
                                     <form class="fm-pop fm-stack" method="POST" action="{{ route('web.ops.orders.dispatch', $o) }}">
                                         @csrf
+                                        <strong>Load by batch</strong>
+                                        <ul>
+                                            @foreach($o->items as $item)
+                                                @if(($item->adjusted_quantity ?? $item->quantity) > 0)
+                                                    <li>{{ $item->product?->name }} × {{ $item->adjusted_quantity ?? $item->quantity }} · Batch {{ $item->product?->batch_number ?? 'unrecorded' }} · Expiry {{ $item->product?->expires_at ?? 'unrecorded' }}</li>
+                                                @endif
+                                            @endforeach
+                                        </ul>
                                         <div><label class="fm-label">Dispatched by</label>
                                             <select class="fm-select" name="dispatch_means" required>
                                                 @foreach($dispatchMeans as $v => $l)<option value="{{ $v }}">{{ $l }}</option>@endforeach

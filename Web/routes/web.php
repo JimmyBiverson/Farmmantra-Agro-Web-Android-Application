@@ -241,6 +241,8 @@ Route::middleware(AuthenticateWeb::class)->group(function () {
 
 Route::get('/payment-proofs/{payment}', PaymentProofController::class)->middleware('signed:relative')->name('payment.proof');
 
+Route::get('/knowledge-library', [KnowledgeController::class, 'library'])->middleware(AuthenticateWeb::class)->name('web.knowledge');
+Route::view('/franchise/returns/new', 'operations.new-return')->middleware(AuthenticateWeb::class)->name('web.franchise.returns.new');
 Route::view('/workspace', 'operations.index')->middleware(AuthenticateWeb::class)->name('web.workspace');
 Route::middleware([AuthenticateWeb::class, 'api.role', 'franchise.active'])->prefix('workspace/data')->group(function () {
     Route::get('/orders', [StaffOrderController::class, 'index'])->middleware('api.role:Sales Head,System Administrator,Warehouse');
