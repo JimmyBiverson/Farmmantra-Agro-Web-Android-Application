@@ -1,0 +1,290 @@
+[
+  {
+    "category": "HERBICIDE",
+    "name": "ROUTHLESS",
+    "active_ingredient": "Glyphosate isopropylamine salt 480 g/L SL",
+    "sku": "HRB-ROU-020L",
+    "packaging_details": "20 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "ROUTHLESS",
+    "active_ingredient": "Glyphosate isopropylamine salt 480 g/L SL",
+    "sku": "HRB-ROU-001L",
+    "packaging_details": "1 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "ROUTHLESS",
+    "active_ingredient": "Glyphosate isopropylamine salt 480 g/L SL",
+    "sku": "HRB-ROU-500M",
+    "packaging_details": "500 ML",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "FUNGICIDE",
+    "name": "CAPTAN",
+    "active_ingredient": "CAPTAN 80 % WG",
+    "sku": "FUN-CAP-001K",
+    "packaging_details": "1 KG",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Kilogram"
+  },
+  {
+    "category": "FUNGICIDE",
+    "name": "CAPTAN",
+    "active_ingredient": "CAPTAN 80 % WG",
+    "sku": "FUN-CAP-500G",
+    "packaging_details": "500 GM",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Kilogram"
+  },
+  {
+    "category": "FUNGICIDE",
+    "name": "CAPTAN",
+    "active_ingredient": "CAPTAN 80 % WG",
+    "sku": "FUN-CAP-250G",
+    "packaging_details": "250 GM",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Kilogram"
+  },
+  {
+    "category": "FUNGICIDE",
+    "name": "CAPTAN",
+    "active_ingredient": "CAPTAN 80 % WG",
+    "sku": "FUN-CAP-100G",
+    "packaging_details": "100 GM",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Kilogram"
+  },
+  {
+    "category": "INSECTICIDE",
+    "name": "FYNAL",
+    "active_ingredient": "Chlorantraniliprole 120G/L + Emamectin Benzoate 35G/L SC",
+    "sku": "INS-FYN-020L",
+    "packaging_details": "20 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "INSECTICIDE",
+    "name": "FYNAL",
+    "active_ingredient": "Chlorantraniliprole 120G/L + Emamectin Benzoate 35G/L SC",
+    "sku": "INS-FYN-001L",
+    "packaging_details": "1 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "INSECTICIDE",
+    "name": "FYNAL",
+    "active_ingredient": "Chlorantraniliprole 120G/L + Emamectin Benzoate 35G/L SC",
+    "sku": "INS-FYN-250M",
+    "packaging_details": "250 ML",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "KUZO",
+    "active_ingredient": "Quizalofop-p-ethyl 3% + Bentazone 27% EC",
+    "sku": "HER-KUZ-020L",
+    "packaging_details": "20 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "KUZO",
+    "active_ingredient": "Quizalofop-p-ethyl 3% + Bentazone 27% EC",
+    "sku": "HER-KUZ-001L",
+    "packaging_details": "1 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "MESONIC",
+    "active_ingredient": "Mesotrione 75G/L + Nicosulfuron 30 G/L OD",
+    "sku": "HER-MES-020L",
+    "packaging_details": "20 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "MESONIC",
+    "active_ingredient": "Mesotrione 75G/L + Nicosulfuron 30 G/L OD",
+    "sku": "HER-MES-001L",
+    "packaging_details": "1 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "INSECTICIDE",
+    "name": "VENUM",
+    "active_ingredient": "Emamectin Benzoate 5% SG",
+    "sku": "INS-VEN-100G",
+    "packaging_details": "100 GM",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Kilogram"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "BARN",
+    "active_ingredient": "Mesotrione 40G/L + Nicosulfuron 20G/L + Terbuthylazine 200G/L OD",
+    "sku": "HER-BAR-020L",
+    "packaging_details": "20 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "BARN",
+    "active_ingredient": "Mesotrione 40G/L + Nicosulfuron 20G/L + Terbuthylazine 200G/L OD",
+    "sku": "HER-BAR-001L",
+    "packaging_details": "1 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "INSECTICIDE",
+    "name": "TURTEL",
+    "active_ingredient": "Acetamiprid 10% + Deltamethrin 2.5% SC",
+    "sku": "INS-TUR-020L",
+    "packaging_details": "20 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "INSECTICIDE",
+    "name": "TURTEL",
+    "active_ingredient": "Acetamiprid 10% + Deltamethrin 2.5% SC",
+    "sku": "INS-TUR-001L",
+    "packaging_details": "1 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "INSECTICIDE",
+    "name": "TURTEL",
+    "active_ingredient": "Acetamiprid 10% + Deltamethrin 2.5% SC",
+    "sku": "INS-TUR-500M",
+    "packaging_details": "500 ML",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "INSECTICIDE",
+    "name": "TURTEL",
+    "active_ingredient": "Acetamiprid 10% + Deltamethrin 2.5% SC",
+    "sku": "INS-TUR-250M",
+    "packaging_details": "250 ML",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "INSECTICIDE",
+    "name": "TURTEL",
+    "active_ingredient": "Acetamiprid 10% + Deltamethrin 2.5% SC",
+    "sku": "INS-TUR-100M",
+    "packaging_details": "100 ML",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "MATRA",
+    "active_ingredient": "Glufosinate-ammonium 200G/L SL",
+    "sku": "HER-MAT-020L",
+    "packaging_details": "20 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "MATRA",
+    "active_ingredient": "Glufosinate-ammonium 200G/L SL",
+    "sku": "HER-MAT-001L",
+    "packaging_details": "1 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "MATRA",
+    "active_ingredient": "Glufosinate-ammonium 200G/L SL",
+    "sku": "HER-MAT-500M",
+    "packaging_details": "500 ML",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "EAGLE",
+    "active_ingredient": "Terbuthylazine 500 g/L SC",
+    "sku": "HER-EAG-020L",
+    "packaging_details": "20 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "HERBICIDE",
+    "name": "EAGLE",
+    "active_ingredient": "Terbuthylazine 500 g/L SC",
+    "sku": "HER-EAG-001L",
+    "packaging_details": "1 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "FUNGICIDE",
+    "name": "FIGHTER",
+    "active_ingredient": "Bixafen 12.5% + Protioconazole 17.5% + Trifloxystrobin 15%",
+    "sku": "FUN-FIG-020L",
+    "packaging_details": "20 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "FUNGICIDE",
+    "name": "TRIVO",
+    "active_ingredient": "Azoxystrobin 200G/L + Difenoconazole 125G/L SC",
+    "sku": "FUN-TRI-020L",
+    "packaging_details": "20 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "FUNGICIDE",
+    "name": "TRIVO",
+    "active_ingredient": "Azoxystrobin 200G/L + Difenoconazole 125G/L SC",
+    "sku": "FUN-TRI-001L",
+    "packaging_details": "1 LTR",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "FUNGICIDE",
+    "name": "TRIVO",
+    "active_ingredient": "Azoxystrobin 200G/L + Difenoconazole 125G/L SC",
+    "sku": "FUN-TRI-500M",
+    "packaging_details": "500 ML",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  },
+  {
+    "category": "FUNGICIDE",
+    "name": "TRIVO",
+    "active_ingredient": "Azoxystrobin 200G/L + Difenoconazole 125G/L SC",
+    "sku": "FUN-TRI-250M",
+    "packaging_details": "250 ML",
+    "unit_of_measure": "Pieces",
+    "volume_unit": "Liter"
+  }
+]

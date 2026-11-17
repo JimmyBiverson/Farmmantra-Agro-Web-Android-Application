@@ -46,7 +46,7 @@ class _AdminDataScreenState extends State<AdminDataScreen> {
           ),
           subtitle: Text(
             widget.entity == 'products'
-                ? '${r['sku']}\nFranchise ${Formatters.currency(r['standard_price'])} · Retail ${Formatters.currency(r['selling_price'])}\nFarmer ${Formatters.currency(r['farmer_price'])}\nBatch ${r['batch_number'] ?? '—'} · Expiry ${r['expires_at'] ?? '—'}'
+                ? '${r['sku']}\nFranchise ${Formatters.currency(r['standard_price'])} · Retail ${Formatters.currency(r['selling_price'])}\nFarmer ${Formatters.currency(r['farmer_price'])}\nLast price change: ${r['price_changed_at'] ?? '—'}\nBatch ${r['batch_number'] ?? '—'} · Expiry ${r['expires_at'] ?? '—'}'
                 : widget.entity == 'users'
                 ? '${r['email']}\n${r['role']?['name'] ?? ''}'
                 : '${r['phone'] ?? ''} · ${r['region'] ?? r['franchise']?['name'] ?? ''}',

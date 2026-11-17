@@ -39,7 +39,7 @@
                             <td class="px-4 py-3 text-center">
                                 <div class="flex items-center justify-center gap-1.5">
                                     <button type="button" class="btn-action" title="Edit" style="color:var(--accent); background:rgba(99,102,241,0.12)"
-                                        @click="editFranchise = {{ \Illuminate\Support\Js::from(['id' => $f->id, 'name' => $f->name, 'code' => $f->code, 'contact_person' => (string) $f->contact_person, 'phone' => (string) $f->phone, 'email' => (string) $f->email, 'region' => (string) $f->region, 'region_id' => $f->region_id ? (string) $f->region_id : '', 'address' => (string) $f->address, 'credit_limit' => (string) $f->credit_limit]) }}; editing = true">
+                                        @click="editFranchise = {{ \Illuminate\Support\Js::from(['id' => $f->id, 'name' => $f->name, 'code' => $f->code, 'contact_person' => (string) $f->contact_person, 'phone' => (string) $f->phone, 'email' => (string) $f->email, 'region' => (string) $f->region, 'region_id' => $f->region_id ? (string) $f->region_id : '', 'address' => (string) $f->address, 'outlet_type' => $f->outlet_type, 'credit_limit' => (string) $f->credit_limit]) }}; editing = true">
                                         <i class="fas fa-pen"></i>
                                     </button>
                                     <form action="{{ route('web.admin.franchises.toggle') }}" method="POST" class="inline">
@@ -120,7 +120,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Credit Limit (UGX)</label>
-                    <input type="number" name="credit_limit" min="0" placeholder="0" class="w-full rounded-lg border px-3 py-2.5 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary)">
+                    <input type="number" name="credit_limit" min="0" placeholder="0" class="w-full rounded-lg border px-3 py-2.5 text-sm" style="background:var(--bg-input); border-color:var(--border-color); color:var(--text-primary)"><label>Outlet type<select name="outlet_type"  required><option value="">Select type</option><option value="own">Own outlet</option><option value="appointed">Appointed franchise</option></select></label>
                 </div>
                 <div class="flex justify-end gap-3 pt-2 border-t" style="border-color:var(--border-color)">
                     <button type="button" @click="open = false" class="px-5 py-2.5 rounded-lg text-sm font-medium border transition hover:opacity-80" style="border-color:var(--border-color); color:var(--text-secondary)">Cancel</button>
@@ -185,7 +185,7 @@
                 </div>
                 <div>
                     <label class="block text-xs font-semibold mb-1.5" style="color:var(--text-secondary)">Credit Limit (UGX)</label>
-                    <input type="number" name="credit_limit" min="0" x-model="editFranchise.credit_limit">
+                    <input type="number" name="credit_limit" min="0" x-model="editFranchise.credit_limit"><label>Outlet type<select name="outlet_type" x-model="editFranchise.outlet_type" required><option value="">Select type</option><option value="own">Own outlet</option><option value="appointed">Appointed franchise</option></select></label>
                 </div>
                 <div class="flex justify-end gap-3 pt-2 border-t" style="border-color:var(--border-color)">
                     <button type="button" @click="editing = false" class="px-5 py-2.5 rounded-lg text-sm font-medium border transition hover:opacity-80" style="border-color:var(--border-color); color:var(--text-secondary)">Cancel</button>

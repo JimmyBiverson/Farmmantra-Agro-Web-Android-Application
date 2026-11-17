@@ -28,6 +28,18 @@ RoleWorkspace salesHeadWorkspace() => RoleWorkspace(
       (_) => const TargetsScreen(),
     ),
     WorkspaceAction(
+      'Post daily expense',
+      'Submit a dated expense',
+      Icons.receipt_long,
+      (_) => const RequestFormScreen(initialType: 'expense'),
+    ),
+    WorkspaceAction(
+      'Field activity',
+      'Check in at a planned location',
+      Icons.my_location,
+      (_) => const FieldZonesScreen(),
+    ),
+    WorkspaceAction(
       'Weekly travel plan',
       'Submit the travel week starting Sunday',
       Icons.route_outlined,

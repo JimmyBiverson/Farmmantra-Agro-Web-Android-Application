@@ -723,6 +723,17 @@ class _PriceSlabSheetState extends State<_PriceSlabSheet> {
                 ),
               ),
               const SizedBox(height: 8),
+              Text(
+                'Franchise: ${Formatters.currency(widget.product.standardPrice)}',
+              ),
+              Text(
+                'Retailer: ${Formatters.currency(widget.product.retailPrice)}',
+              ),
+              Text(
+                'Farmer: ${Formatters.currency(widget.product.farmerPrice)}',
+              ),
+              if (widget.product.priceChangedAt != null)
+                Text('Price changed: ${widget.product.priceChangedAt}'),
               if (widget.product.priceSlabs.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 16),

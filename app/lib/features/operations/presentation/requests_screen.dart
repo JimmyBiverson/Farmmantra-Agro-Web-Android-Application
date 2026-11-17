@@ -288,6 +288,10 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
   DateTime date = DateTime.now(), week = DateTime.now();
   bool saving = false;
   String? fundId;
+  int? plannedZone;
+  String activity = fieldActivities.first;
+  List<Map<String, dynamic>> zones = [];
+  Map<String, dynamic>? photoFix;
   OperationsFile? receipt;
   List<Map<String, dynamic>> funds = [];
   @override
@@ -305,6 +309,11 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
   Future<void> _loadFunds() async {
     final api = operationsApi(context);
     try {
+      final role = context.read<AuthProvider>().userRole;
+      if (role == UserRole.salesHead || role == UserRole.fieldAgronomist) {
+        final response = await api.get('operations/zones');
+        if (mounted) setState(() => zones = OperationsApi.rows(response));
+      }
       final r = await api.get('operations/requests?type=funds');
       if (mounted) {
         setState(
@@ -338,7 +347,9 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
     final role = context.watch<AuthProvider>().userRole;
     final types = {
       'expense': 'Daily expense',
-      'funds': 'Request funds',
+      if (role != UserRole.franchisePartner ||
+          context.watch<AuthProvider>().user?.outletType == 'own')
+        'funds': 'Request funds',
       if (role == UserRole.salesHead || role == UserRole.fieldAgronomist)
         'travel': 'Weekly travel plan',
       if (role == UserRole.systemAdministrator) 'budget': 'Monthly budget',
@@ -424,6 +435,29 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                   if (d != null) setState(() => week = d);
                 },
               ),
+              DropdownButtonFormField<int>(
+                isExpanded: true,
+                decoration: const InputDecoration(
+                  labelText: 'Planned field boundary',
+                ),
+                items: [
+                  for (final z in zones)
+                    DropdownMenuItem(
+                      value: z['id'] as int,
+                      child: Text(z['name']),
+                    ),
+                ],
+                onChanged: (v) => setState(() => plannedZone = v),
+              ),
+              DropdownButtonFormField(
+                initialValue: activity,
+                decoration: const InputDecoration(labelText: 'Activity'),
+                items: [
+                  for (final a in fieldActivities)
+                    DropdownMenuItem(value: a, child: Text(a)),
+                ],
+                onChanged: (v) => setState(() => activity = v!),
+              ),
               TextFormField(
                 controller: itinerary,
                 maxLines: 4,
@@ -479,11 +513,31 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
               OutlinedButton.icon(
                 onPressed: () async {
                   final file = await ImagePicker().pickImage(
-                    source: ImageSource.gallery,
+                    source: ImageSource.camera,
                     maxWidth: 1800,
                     imageQuality: 80,
                   );
                   if (file != null) {
+                    try {
+                      final fix = await operationsPlatform
+                          .invokeMapMethod<String, dynamic>('location');
+                      if (fix == null)
+                        throw StateError('Location unavailable.');
+                      photoFix = {
+                        'latitude': fix['latitude'],
+                        'longitude': fix['longitude'],
+                        'captured_at': DateTime.fromMillisecondsSinceEpoch(
+                          (fix['timestamp'] as num).toInt(),
+                          isUtc: true,
+                        ).toIso8601String(),
+                      };
+                    } catch (e) {
+                      if (context.mounted)
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(operationError(e))),
+                        );
+                      return;
+                    }
                     final bytes = await file.readAsBytes();
                     if (mounted) {
                       setState(
@@ -538,6 +592,11 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
           if (type == 'expense' && fundId != null) 'fund_request_id': fundId,
           'details': {
             'notes': notes.text.trim(),
+            if (type == 'travel') ...{
+              'zone_id': plannedZone,
+              'category': activity,
+            },
+            if (type == 'expense' && photoFix != null) ...photoFix!,
             if (type == 'travel')
               'week_start': week.toIso8601String().split('T').first,
             if (type == 'travel') 'itinerary': itinerary.text.trim(),

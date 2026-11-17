@@ -6,6 +6,13 @@ import '../../../core/enums/user_role.dart';
 import '../data/operations_api.dart';
 import 'workspace_ui.dart';
 
+const fieldActivities = [
+  'Demo plot',
+  'Farmer meeting',
+  'Retailer visit',
+  'Farmer visit',
+  'Crop clinic',
+];
 const operationsPlatform = MethodChannel('farmmantra/operations');
 
 class FieldZonesScreen extends StatefulWidget {
@@ -113,7 +120,8 @@ class _FieldZonesScreenState extends State<FieldZonesScreen> {
                               ),
                             ),
                             Text('Boundary radius: ${zone['radius_meters']} m'),
-                            if (role == UserRole.fieldAgronomist)
+                            if (role == UserRole.fieldAgronomist ||
+                                role == UserRole.salesHead)
                               Padding(
                                 padding: const EdgeInsets.only(top: 14),
                                 child: FilledButton.icon(
@@ -137,6 +145,20 @@ class _FieldZonesScreenState extends State<FieldZonesScreen> {
   }
 
   Future<void> checkin(Map<String, dynamic> zone) async {
+    final activity = await showDialog<String>(
+      context: context,
+      builder: (d) => SimpleDialog(
+        title: const Text('Field activity'),
+        children: [
+          for (final a in fieldActivities)
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(d, a),
+              child: Text(a),
+            ),
+        ],
+      ),
+    );
+    if (activity == null || !mounted) return;
     setState(() => busy = true);
     final api = operationsApi(context);
     try {
@@ -153,6 +175,7 @@ class _FieldZonesScreenState extends State<FieldZonesScreen> {
         'title': 'Visit · ${zone['name']}',
         'entry_date': DateTime.now().toIso8601String().split('T').first,
         'details': {
+          'category': activity,
           'zone_id': zone['id'],
           'latitude': location['latitude'],
           'longitude': location['longitude'],

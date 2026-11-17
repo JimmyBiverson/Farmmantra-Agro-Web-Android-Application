@@ -271,7 +271,7 @@ class WorkflowFixesTest extends TestCase
         $this->assertStringContainsString('products/', $product->image);
         Storage::disk('public')->assertExists($product->image);
         $this->assertNotNull($product->image_url);
-        $this->assertStringContainsString('storage/'.$product->image, $product->image_url);
+        $this->assertStringContainsString('product-asset/'.$product->image, $product->image_url);
     }
 
     public function test_products_api_includes_image_url(): void
@@ -287,7 +287,7 @@ class WorkflowFixesTest extends TestCase
 
         $this->assertNotNull($found);
         $this->assertEquals('products/'.$this->product->sku.'.png', $found['image']);
-        $this->assertStringContainsString('storage/products/'.$this->product->sku.'.png', $found['image_url']);
+        $this->assertStringContainsString('product-asset/products/'.$this->product->sku.'.png', $found['image_url']);
     }
 
     public function test_admin_user_creation_requires_matching_password_confirmation(): void

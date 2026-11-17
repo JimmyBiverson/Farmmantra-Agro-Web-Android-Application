@@ -1,4 +1,6 @@
 import 'widgets/common/workspace_bottom_bar.dart';
+import 'features/operations/presentation/outlet_work.dart';
+import 'features/operations/presentation/workspace_ui.dart';
 import 'features/operations/presentation/operations_home.dart';
 import 'dart:async';
 import 'providers/site_settings_provider.dart';
@@ -50,7 +52,21 @@ class _FarmmantraAppState extends State<FarmmantraApp>
     });
   }
 
+  Future<void> _syncCounts() async {
+    final user = context.read<AuthProvider>().user;
+    if (user?.role != UserRole.operationsManager) return;
+    final api = operationsApi(context);
+    try {
+      await CountOutbox.flush(api, user!.id);
+    } catch (_) {
+      // The durable queue is retried on resume and while the app is open.
+    } finally {
+      api.dispose();
+    }
+  }
+
   void _refreshBranding() {
+    if (mounted) unawaited(_syncCounts());
     if (mounted) context.read<SiteSettingsProvider?>()?.reload();
   }
 
@@ -63,6 +79,8 @@ class _FarmmantraAppState extends State<FarmmantraApp>
     UserRole.franchisePartner => '/franchise/dashboard',
     UserRole.financeDepartment => '/finance/dashboard',
     UserRole.systemAdministrator => '/admin/dashboard',
+    UserRole.operationsManager ||
+    UserRole.officeSales => '/operations/dashboard',
     UserRole.salesHead => '/sales-head/dashboard',
     UserRole.fieldAgronomist => '/agronomist/dashboard',
     UserRole.warehouse => '/warehouse/dashboard',
@@ -74,7 +92,6 @@ class _FarmmantraAppState extends State<FarmmantraApp>
     super.didChangeDependencies();
     final auth = context.read<AuthProvider>();
     _router ??= GoRouter(
-
       refreshListenable: auth,
       initialLocation: '/',
       redirect: (context, state) {
@@ -124,72 +141,76 @@ class _FarmmantraAppState extends State<FarmmantraApp>
             child: child,
           ),
           routes: [
-
-        GoRoute(
-          path: '/operations',
-          builder: (_, state) => const OperationsHubScreen(),
-        ),
-        GoRoute(
-          path: '/operations/returns',
-          builder: (_, state) => const ReturnsScreen(),
-        ),
-        GoRoute(
-          path: '/operations/requests',
-          builder: (_, state) => const RequestsScreen(),
-        ),
-        GoRoute(
-          path: '/admin/dashboard',
-          builder: (_, state) => const AdminShell(),
-        ),
-        GoRoute(
-          path: '/sales-head/dashboard',
-          builder: (_, state) => const SalesHeadShell(),
-        ),
-        GoRoute(
-          path: '/agronomist/dashboard',
-          builder: (_, state) => const AgronomistShell(),
-        ),
-        GoRoute(
-          path: '/warehouse/dashboard',
-          builder: (_, state) => const WarehouseShell(),
-        ),
-        GoRoute(
-          path: '/franchise/dashboard',
-          builder: (_, state) => const FranchiseShell(),
-        ),
-        GoRoute(
-          path: '/staff/dashboard',
-          builder: (_, state) => const StaffShell(),
-        ),
-        GoRoute(
-          path: '/finance/dashboard',
-          builder: (_, state) => const FinanceShell(),
-        ),
-        GoRoute(
-          path: '/finance/payment-detail',
-          builder: (_, state) =>
-              FinancePaymentDetailScreen(paymentId: _id(state)),
-        ),
-        GoRoute(
-          path: '/franchise/order-detail',
-          builder: (_, state) => OrderDetailScreen(orderId: _id(state)),
-        ),
-        GoRoute(
-          path: '/franchise/statement',
-          builder: (_, state) => const StatementScreen(),
-        ),
-        GoRoute(
-          path: '/franchise/payment',
-          builder: (_, state) => const PaymentScreen(),
-        ),
-        GoRoute(
-          path: '/staff/order-detail',
-          builder: (_, state) => StaffOrderDetailScreen(orderId: _id(state)),
-        ),
-        GoRoute(
-          path: '/staff/orders/detail',
-          redirect: (_, state) => '/staff/order-detail?id=${_id(state)}',
-        ),
+            GoRoute(
+              path: '/operations/dashboard',
+              builder: (_, state) => const OperationsShell(),
+            ),
+            GoRoute(
+              path: '/operations',
+              builder: (_, state) => const OperationsHubScreen(),
+            ),
+            GoRoute(
+              path: '/operations/returns',
+              builder: (_, state) => const ReturnsScreen(),
+            ),
+            GoRoute(
+              path: '/operations/requests',
+              builder: (_, state) => const RequestsScreen(),
+            ),
+            GoRoute(
+              path: '/admin/dashboard',
+              builder: (_, state) => const AdminShell(),
+            ),
+            GoRoute(
+              path: '/sales-head/dashboard',
+              builder: (_, state) => const SalesHeadShell(),
+            ),
+            GoRoute(
+              path: '/agronomist/dashboard',
+              builder: (_, state) => const AgronomistShell(),
+            ),
+            GoRoute(
+              path: '/warehouse/dashboard',
+              builder: (_, state) => const WarehouseShell(),
+            ),
+            GoRoute(
+              path: '/franchise/dashboard',
+              builder: (_, state) => const FranchiseShell(),
+            ),
+            GoRoute(
+              path: '/staff/dashboard',
+              builder: (_, state) => const StaffShell(),
+            ),
+            GoRoute(
+              path: '/finance/dashboard',
+              builder: (_, state) => const FinanceShell(),
+            ),
+            GoRoute(
+              path: '/finance/payment-detail',
+              builder: (_, state) =>
+                  FinancePaymentDetailScreen(paymentId: _id(state)),
+            ),
+            GoRoute(
+              path: '/franchise/order-detail',
+              builder: (_, state) => OrderDetailScreen(orderId: _id(state)),
+            ),
+            GoRoute(
+              path: '/franchise/statement',
+              builder: (_, state) => const StatementScreen(),
+            ),
+            GoRoute(
+              path: '/franchise/payment',
+              builder: (_, state) => const PaymentScreen(),
+            ),
+            GoRoute(
+              path: '/staff/order-detail',
+              builder: (_, state) =>
+                  StaffOrderDetailScreen(orderId: _id(state)),
+            ),
+            GoRoute(
+              path: '/staff/orders/detail',
+              redirect: (_, state) => '/staff/order-detail?id=${_id(state)}',
+            ),
           ],
         ),
       ],

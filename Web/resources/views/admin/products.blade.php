@@ -54,7 +54,7 @@
                                 </div>
                                 @else
                                 <span class="font-semibold">UGX {{ number_format($p->standard_price) }}</span>
-                                <div class="text-[10px]" style="color:var(--text-muted)">R {{ number_format($p->retail_price) }} · F {{ number_format($p->farmer_unit_price) }}</div>
+                                <div class="text-[10px]" style="color:var(--text-muted)">Retailer {{ number_format($p->retail_price) }} · Farmer {{ number_format($p->farmer_unit_price) }} @if($p->price_changed_at)<br>Price changed {{ $p->price_changed_at }}@endif</div>
                                 @endif
                             </td>
                             <td class="px-4 py-3 text-sm text-right" style="color:var(--text-primary)">{{ number_format($p->warehouseInventory->quantity ?? 0) }}</td>

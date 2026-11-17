@@ -61,7 +61,7 @@ void main() {
           ),
         ),
       );
-      await tester.tap(find.text('Learn'));
+      await tester.tap(find.byTooltip('Learn'));
       expect(selected, 2);
       expect(tester.takeException(), isNull);
     },

@@ -63,6 +63,45 @@ class NovemberRequirementsTest extends TestCase
         return Order::findOrFail($res->json('data.id'));
     }
 
+    public function test_physical_stock_variances_require_reasons_and_offline_retries_do_not_duplicate(): void
+    {
+        $manager = User::factory()->create(['role_id' => Role::where('name', 'Operations Manager')->value('id'), 'is_active' => true]);
+        Sanctum::actingAs($manager);
+        FranchiseInventory::updateOrCreate(['franchise_id' => $this->franchise->id, 'product_id' => $this->product->id], ['quantity' => 8, 'total_value' => 8000]);
+        $snapshot = $this->getJson('/api/v1/operations/stock-checks/outlets/'.$this->franchise->id)->assertOk()->json('snapshot');
+        $entry = ['snapshot' => $snapshot, 'counted_at' => now()->toIso8601String(), 'lines' => [['product_id' => $this->product->id, 'count' => 7]]];
+        $this->postJson('/api/v1/operations/stock-checks', $entry)->assertUnprocessable();
+        $entry['lines'][0]['remark'] = 'One damaged pack';
+        $this->postJson('/api/v1/operations/stock-checks', $entry)->assertOk();
+        $this->postJson('/api/v1/operations/stock-checks', $entry)->assertOk();
+        $this->assertDatabaseCount('stock_checks', 1);
+        $this->assertEquals(-1, json_decode(DB::table('stock_checks')->value('lines'), true)[0]['difference']);
+        $this->login('franchise');
+        $this->postJson('/api/v1/operations/stock-checks', $entry)->assertForbidden();
+    }
+
+    public function test_office_sales_reduce_only_the_assigned_outlets_inventory(): void
+    {
+        $clerk = User::factory()->create(['role_id' => Role::where('name', 'Office Sales')->value('id'), 'franchise_id' => $this->franchise->id, 'is_active' => true]);
+        FranchiseInventory::updateOrCreate(['franchise_id' => $this->franchise->id, 'product_id' => $this->product->id], ['quantity' => 8, 'total_value' => 8000]);
+        Sanctum::actingAs($clerk);
+        $this->postJson('/api/v1/operations/office-sales', ['items' => [['product_id' => $this->product->id, 'quantity' => 2]], 'payment_method' => 'cash', 'price_tier' => 'retailer'])->assertCreated();
+        $this->assertDatabaseHas('franchise_inventories', ['franchise_id' => $this->franchise->id, 'product_id' => $this->product->id, 'quantity' => 6]);
+    }
+
+    public function test_finance_records_an_issued_invoice_once_for_a_settled_order(): void
+    {
+        $order = Order::create(['order_number' => 'INV-TEST', 'franchise_id' => $this->franchise->id, 'ordered_by' => $this->actors['franchise']->id, 'status' => 'pending', 'total_amount' => 100]);
+        $this->login('finance');
+        $url = '/api/v1/operations/invoices/'.$order->id;
+        $this->postJson($url, ['reference' => 'EFRIS-1'])->assertConflict();
+        $order->forceFill(['closed_at' => now(), 'amount_paid' => 100])->save();
+        $this->getJson('/api/v1/operations/dashboard')->assertJsonFragment(['order_number' => 'INV-TEST']);
+        $this->postJson($url, ['reference' => 'EFRIS-1'])->assertOk();
+        $this->postJson($url, ['reference' => 'EFRIS-2'])->assertConflict();
+        $this->getJson('/api/v1/operations/dashboard')->assertJsonMissing(['order_number' => 'INV-TEST']);
+    }
+
     public function test_order_reviews_are_sequential_and_do_not_mutate_stock(): void
     {
         $order = $this->place();
@@ -85,6 +124,9 @@ class NovemberRequirementsTest extends TestCase
     public function test_funding_is_admin_approved_then_finance_paid_with_owner_scope(): void
     {
         $this->login('franchise');
+        $this->postJson('/api/v1/operations/requests', ['type' => 'funds', 'title' => 'Supplies', 'amount' => 100, 'entry_date' => today()->toDateString(), 'details' => ['notes' => 'Supplies']])->assertForbidden();
+        $this->franchise->update(['outlet_type' => 'own']);
+        $this->actors['franchise']->unsetRelation('franchise');
         $id = $this->postJson('/api/v1/operations/requests', ['type' => 'funds', 'title' => 'Shop operation', 'amount' => 10000, 'entry_date' => today()->toDateString(), 'details' => ['notes' => 'Supplies']])->assertCreated()->json('data.id');
         $this->login('finance');
         $this->postJson("/api/v1/operations/requests/$id/review", ['action' => 'pay', 'notes' => 'Paid', 'reference' => 'BANK-1'])->assertForbidden();
@@ -196,6 +238,7 @@ class NovemberRequirementsTest extends TestCase
     public function test_finance_pending_counter_only_counts_actionable_submissions(): void
     {
         $this->login('franchise');
+        $this->franchise->update(['outlet_type' => 'own']);
         $fund = $this->postJson('/api/v1/operations/requests', ['type' => 'funds', 'title' => 'Operations', 'amount' => 100, 'entry_date' => today()->toDateString(), 'details' => ['notes' => 'Supplies']])->assertCreated()->json('data.id');
         $expense = $this->postJson('/api/v1/operations/requests', ['type' => 'expense', 'title' => 'Expense', 'amount' => 50, 'entry_date' => today()->toDateString(), 'details' => ['notes' => 'Receipt']])->assertCreated()->json('data.id');
         $this->login('finance');

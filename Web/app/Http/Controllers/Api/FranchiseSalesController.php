@@ -39,6 +39,7 @@ class FranchiseSalesController extends Controller
             'notes' => 'nullable|string',
         ]);
 
+        abort_unless($request->user()->franchise_id, 422, 'Assign an outlet before recording sales.');
         $sale = SaleService::create($request->user(), $request->all());
 
         return response()->json([

@@ -98,7 +98,7 @@ class WebController extends Controller
 
     public function dashboard()
     {
-        if (auth()->user()->isSalesHead() || auth()->user()->isAgronomist()) {
+        if (in_array(auth()->user()->role?->name, ['Sales Head', 'Field Agronomist', 'Office Sales', 'Operations Manager'], true)) {
             return redirect()->route('web.workspace');
         }
         $user = Auth::user();
@@ -1514,9 +1514,10 @@ class WebController extends Controller
             'region_id' => 'nullable|exists:regions,id',
             'district_id' => 'nullable|exists:districts,id',
             'address' => 'nullable|string|max:500',
+            'outlet_type' => 'sometimes|in:own,appointed',
             'credit_limit' => 'nullable|numeric|min:0',
         ]);
-        $data = $request->only('name', 'code', 'contact_person', 'phone', 'email', 'region', 'region_id', 'district_id', 'address', 'credit_limit');
+        $data = $request->only('name', 'code', 'contact_person', 'phone', 'email', 'region', 'region_id', 'district_id', 'address', 'outlet_type', 'credit_limit');
         if (! empty($data['region_id'])) {
             $data['region'] = Region::whereKey($data['region_id'])->value('name');
         }
@@ -1551,10 +1552,11 @@ class WebController extends Controller
             'region_id' => 'nullable|exists:regions,id',
             'district_id' => 'nullable|exists:districts,id',
             'address' => 'nullable|string|max:500',
+            'outlet_type' => 'sometimes|in:own,appointed',
             'credit_limit' => 'nullable|numeric|min:0',
         ]);
         $franchise = Franchise::findOrFail($request->id);
-        $data = $request->only('name', 'code', 'contact_person', 'phone', 'email', 'region', 'region_id', 'district_id', 'address', 'credit_limit');
+        $data = $request->only('name', 'code', 'contact_person', 'phone', 'email', 'region', 'region_id', 'district_id', 'address', 'outlet_type', 'credit_limit');
         if (! empty($data['region_id'])) {
             $data['region'] = Region::whereKey($data['region_id'])->value('name');
         }

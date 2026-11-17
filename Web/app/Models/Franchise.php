@@ -11,7 +11,7 @@ class Franchise extends Model
     use HasFactory;
 
     protected $fillable = [
-        'name', 'code', 'contact_person', 'phone', 'email',
+        'outlet_type', 'name', 'code', 'contact_person', 'phone', 'email',
         'region', 'region_id', 'district_id', 'address', 'credit_limit', 'account_balance',
         'monthly_target', 'profile_photo', 'is_active',
     ];

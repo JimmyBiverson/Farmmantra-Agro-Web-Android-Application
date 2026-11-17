@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\Operations\ExportController;
 use App\Http\Controllers\Api\Operations\KnowledgeController;
 use App\Http\Controllers\Api\Operations\RequestController;
 use App\Http\Controllers\Api\Operations\ReturnController;
+use App\Http\Controllers\Api\Operations\StockCheckController;
 use App\Http\Controllers\Api\Operations\WorkspaceController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ReportController;
@@ -223,6 +224,12 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'api.role', 'franchise.active'])->prefix('operations')->group(function () {
+    Route::get('/stock-checks/outlets', [StockCheckController::class, 'outlets']);
+    Route::get('/stock-checks/outlets/{franchise}', [StockCheckController::class, 'inventory']);
+    Route::post('/stock-checks', [StockCheckController::class, 'store']);
+    Route::post('/office-sales', [FranchiseSalesController::class, 'store'])->middleware('api.role:Office Sales');
+    Route::get('/office-stock', [WorkspaceController::class, 'officeStock'])->middleware('api.role:Office Sales');
+    Route::post('/invoices/{order}', [WorkspaceController::class, 'invoice']);
     Route::get('/dashboard', [WorkspaceController::class, 'dashboard']);
     Route::get('/customers', [WorkspaceController::class, 'customers']);
     Route::post('/customers', [WorkspaceController::class, 'storeCustomer']);

@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\Api\FranchiseSalesController;
 use App\Http\Controllers\Api\Operations\ExportController;
 use App\Http\Controllers\Api\Operations\KnowledgeController;
 use App\Http\Controllers\Api\Operations\RequestController;
 use App\Http\Controllers\Api\Operations\ReturnController;
+use App\Http\Controllers\Api\Operations\StockCheckController;
 use App\Http\Controllers\Api\Operations\WorkspaceController;
 use App\Http\Controllers\Api\StaffOrderController;
 use App\Http\Controllers\PaymentProofController;
@@ -242,6 +244,12 @@ Route::get('/payment-proofs/{payment}', PaymentProofController::class)->middlewa
 Route::view('/workspace', 'operations.index')->middleware(AuthenticateWeb::class)->name('web.workspace');
 Route::middleware([AuthenticateWeb::class, 'api.role', 'franchise.active'])->prefix('workspace/data')->group(function () {
     Route::get('/orders', [StaffOrderController::class, 'index'])->middleware('api.role:Sales Head,System Administrator,Warehouse');
+    Route::get('/stock-checks/outlets', [StockCheckController::class, 'outlets']);
+    Route::get('/stock-checks/outlets/{franchise}', [StockCheckController::class, 'inventory']);
+    Route::post('/stock-checks', [StockCheckController::class, 'store']);
+    Route::post('/office-sales', [FranchiseSalesController::class, 'store'])->middleware('api.role:Office Sales');
+    Route::get('/office-stock', [WorkspaceController::class, 'officeStock'])->middleware('api.role:Office Sales');
+    Route::post('/invoices/{order}', [WorkspaceController::class, 'invoice']);
     Route::get('/dashboard', [WorkspaceController::class, 'dashboard']);
     Route::get('/customers', [WorkspaceController::class, 'customers']);
     Route::post('/customers', [WorkspaceController::class, 'storeCustomer']);

@@ -11,6 +11,7 @@ use App\Models\Franchise;
 use App\Models\FranchiseInventory;
 use App\Models\OperationRequest;
 use App\Models\Order;
+use App\Models\PaymentSubmission;
 use App\Models\Product;
 use App\Models\Region;
 use App\Models\Role;
@@ -27,10 +28,31 @@ use Illuminate\Validation\Rule;
 
 class WorkspaceController extends Controller
 {
+    public function officeStock(Request $request): JsonResponse
+    {
+        abort_unless($request->user()->franchise_id, 422, 'Ask admin to assign the office sales outlet.');
+
+        return response()->json(['data' => FranchiseInventory::where('franchise_id', $request->user()->franchise_id)
+            ->join('products', 'products.id', '=', 'franchise_inventories.product_id')->where('products.is_active', true)
+            ->where('quantity', '>', 0)->get(['product_id', 'products.name', 'sku', 'quantity', 'farmer_price', 'selling_price'])]);
+    }
+
+    public function invoice(Request $request, Order $order): JsonResponse
+    {
+        abort_unless($request->user()->isFinance() || $request->user()->isAdmin(), 403);
+        $reference = $request->validate(['reference' => 'required|string|max:100|unique:orders,efris_reference'])['reference'];
+        abort_unless(Order::whereKey($order->id)->whereNotNull('closed_at')->whereNull('efris_reference')->update(['efris_reference' => $reference]), 409);
+
+        return response()->json(['saved' => true]);
+    }
+
     public function dashboard(Request $request): JsonResponse
     {
         $actor = $request->user();
-        $franchiseId = $actor->isFranchisePartner() ? $actor->franchise_id : null;
+        if (in_array($actor->role?->name, ['Operations Manager', 'Office Sales'], true)) {
+            return response()->json(['data' => ['greeting' => 'Welcome, '.$actor->name, 'updated_at' => now()->toIso8601String()]]);
+        }
+        $franchiseId = $actor->isFranchisePartner() ? ($actor->franchise_id ?? -1) : null;
         $orders = Order::query()->when($franchiseId, fn ($q) => $q->where('franchise_id', $franchiseId));
         if ($actor->isAgronomist()) {
             $orders->whereRaw('1=0');
@@ -58,7 +80,24 @@ class WorkspaceController extends Controller
             $pendingRequests->where('user_id', $actor->id)->where('status', 'submitted');
         }
 
+        $financial = $actor->isFranchisePartner() || $actor->isAdmin() || $actor->isFinance() || $actor->isSalesHead();
+        $payments = PaymentSubmission::where('status', 'accepted')
+            ->when($actor->isFranchisePartner(), fn ($q) => $q->where('franchise_id', $actor->franchise_id ?? 0));
+        $topCustomers = $actor->isFranchisePartner() ? Sale::query()
+            ->join('customers', 'customers.id', '=', 'sales.customer_id')
+            ->where('sales.franchise_id', $actor->franchise_id ?? 0)
+            ->groupBy('customers.id', 'customers.name')->selectRaw('customers.name, SUM(sales.final_amount) as total')
+            ->orderByDesc('total')->orderBy('customers.id')->limit(10)->get() : [];
+        $pendingInvoices = $actor->isFinance() || $actor->isAdmin()
+            ? Order::whereNotNull('closed_at')->whereNull('efris_reference')->orderBy('closed_at')->get(['id', 'order_number'])
+            : [];
+
         return response()->json(['data' => [
+            'field_progress' => ($actor->isAgronomist() || $actor->isSalesHead()) ? $this->fieldProgress($actor) : [],
+            'payments_month' => $financial ? (float) (clone $payments)->whereBetween('accepted_at', [now()->startOfMonth(), now()])->sum('verified_amount') : null,
+            'payments_today' => $financial ? (float) (clone $payments)->whereDate('accepted_at', today())->sum('verified_amount') : null,
+            'overdue_amount' => $financial ? $due->where('received_at', '<', now()->subDays(15))->sum(fn ($o) => max(0, ($o->received_amount ?? $o->total_amount) - $o->amount_paid)) : null,
+            'pending_invoices' => $pendingInvoices, 'top_customers' => $topCustomers,
             'greeting' => 'Good '.(now()->hour < 12 ? 'morning' : (now()->hour < 17 ? 'afternoon' : 'evening')).', '.$actor->name,
             'monthly_expenses' => $spent, 'monthly_budget' => $budget, 'budget_used_percentage' => $budget > 0 ? round($spent / $budget * 100, 1) : null,
             'monthly_sales' => $actor->isAgronomist() ? null : (float) (clone $month)->sum('final_amount'),
@@ -73,6 +112,31 @@ class WorkspaceController extends Controller
             'achievements' => TargetProgressService::summary($actor),
             'updated_at' => now()->toIso8601String(),
         ]]);
+    }
+
+    private function fieldProgress(User $actor): array
+    {
+        $sunday = today()->startOfWeek(Carbon::SUNDAY);
+        $periods = ['Last week' => [$sunday->copy()->subWeek(), $sunday->copy()->subDay()], 'This week' => [$sunday, $sunday->copy()->addDays(6)], 'This month' => [today()->startOfMonth(), today()->endOfMonth()]];
+        $result = [];
+        foreach ($periods as $label => [$from,$to]) {
+            $plans = OperationRequest::where('user_id', $actor->id)->where('type', 'travel')->where('status', '!=', 'rejected')
+                ->whereBetween('details->week_start', [$from->toDateString(), $to->toDateString()])->get();
+            $visits = OperationRequest::where('user_id', $actor->id)->where('type', 'checkin')->whereBetween('entry_date', [$from->toDateString(), $to->toDateString()])->get();
+            foreach ($plans as $plan) {
+                $zone = $plan->details['zone_id'] ?? null;
+                $category = $plan->details['category'] ?? null;
+                $start = Carbon::parse($plan->details['week_start']);
+                $matched = $zone ? $visits->first(fn ($v) => $v->entry_date->between($start, $start->copy()->addDays(6)) && ($v->details['zone_id'] ?? null) == $zone && ($v->details['category'] ?? null) === $category && ($v->details['inside_zone'] ?? false)) : null;
+                $verified = $matched !== null;
+                if ($verified) {
+                    $visits = $visits->reject(fn ($v) => $v->id === $matched->id);
+                }
+                $result[] = ['period' => $label, 'title' => $plan->title, 'activity' => $category, 'status' => ! $zone ? 'No planned boundary recorded' : ($verified ? 'Visit verified' : 'No matching check-in')];
+            }
+        }
+
+        return $result;
     }
 
     public function reviewOrder(Request $request, Order $order): JsonResponse

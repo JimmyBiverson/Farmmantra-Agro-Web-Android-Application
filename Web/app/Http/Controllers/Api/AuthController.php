@@ -153,6 +153,7 @@ class AuthController extends Controller
             'role' => $user->role?->name,
             'franchise_id' => $user->franchise_id,
             'franchise_name' => $user->franchise?->name,
+            'outlet_type' => $user->franchise?->outlet_type,
             'franchise_code' => $user->franchise?->code,
             'is_active' => $user->is_active,
             'notification_preferences' => $user->notification_preferences ?? [],

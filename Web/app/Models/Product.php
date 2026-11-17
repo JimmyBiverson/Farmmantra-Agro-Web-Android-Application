@@ -31,6 +31,15 @@ class Product extends Model
 
     protected $appends = ['image_url', 'all_images', 'effective_price', 'franchise_price', 'retail_price', 'farmer_unit_price'];
 
+    protected static function booted(): void
+    {
+        static::updating(function (Product $product) {
+            if ($product->isDirty(['standard_price', 'selling_price', 'farmer_price'])) {
+                $product->price_changed_at = now();
+            }
+        });
+    }
+
     public function category()
     {
         return $this->belongsTo(Category::class);

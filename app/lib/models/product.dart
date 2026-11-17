@@ -46,6 +46,7 @@ class Product {
   final String categoryName;
   final String unitOfMeasure;
   final String? packagingDetails;
+  final String? priceChangedAt;
   final double standardPrice;
   final bool taxEnabled;
   final String? taxType;
@@ -71,6 +72,7 @@ class Product {
     required this.categoryName,
     required this.unitOfMeasure,
     this.packagingDetails,
+    this.priceChangedAt,
     required this.standardPrice,
     this.taxEnabled = false,
     this.taxType,
@@ -145,6 +147,7 @@ class Product {
           : (json['category_name'] ?? ''),
       unitOfMeasure: json['unit_of_measure'] ?? '',
       packagingDetails: json['packaging_details'],
+      priceChangedAt: json['price_changed_at']?.toString(),
       standardPrice: _toDouble(json['standard_price'] ?? json['selling_price']),
       taxEnabled: json['tax_enabled'] ?? false,
       taxType: json['tax_type'],

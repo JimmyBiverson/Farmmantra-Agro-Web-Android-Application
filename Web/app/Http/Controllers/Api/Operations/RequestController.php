@@ -44,18 +44,25 @@ class RequestController extends Controller
         ]);
         $actor = $request->user();
         $type = $data['type'];
+        abort_if($type === 'funds' && $actor->isFranchisePartner() && $actor->franchise?->outlet_type !== 'own', 403, 'Operational funding is available to own outlets only.');
         abort_if($type === 'budget' && ! $actor->isAdmin(), 403);
         abort_if($type === 'travel' && ! ($actor->isSalesHead() || $actor->isAgronomist()), 403);
-        abort_if($type === 'checkin' && ! $actor->isAgronomist(), 403);
+        abort_if($type === 'checkin' && ! ($actor->isAgronomist() || $actor->isSalesHead()), 403);
         if (in_array($type, ['expense', 'funds', 'budget'], true) && ($data['amount'] ?? 0) <= 0) {
             throw ValidationException::withMessages(['amount' => 'Enter an amount greater than zero.']);
         }
         $details = array_intersect_key($data['details'], array_flip(['notes', 'category', 'itinerary', 'week_start', 'zone_id', 'latitude', 'longitude', 'accuracy', 'captured_at']));
+        if ($type === 'travel' && isset($details['zone_id'])) {
+            abort_unless(FieldZone::whereKey($details['zone_id'])->where('active', true)->where(fn ($q) => $q->whereNull('user_id')->orWhere('user_id', $actor->id))->exists(), 422, 'Select an assigned field boundary.');
+        }
         if ($type === 'travel') {
             $request->validate(['details.week_start' => 'required|date', 'details.itinerary' => 'required|string|max:5000']);
             if (! Carbon::parse($details['week_start'])->isSunday()) {
                 throw ValidationException::withMessages(['details.week_start' => 'Select the Sunday starting this weekly travel plan.']);
             }
+        }
+        if (($actor->isSalesHead() || $actor->isAgronomist()) && str_starts_with($request->file('receipt')?->getMimeType() ?? '', 'image/')) {
+            $request->validate(['details.latitude' => 'required|numeric|between:-90,90', 'details.longitude' => 'required|numeric|between:-180,180', 'details.captured_at' => 'required|date|before_or_equal:now']);
         }
         if ($type === 'checkin') {
             $request->validate(['details.zone_id' => 'required|integer|exists:field_zones,id', 'details.latitude' => 'required|numeric|between:-90,90', 'details.longitude' => 'required|numeric|between:-180,180', 'details.accuracy' => 'required|numeric|between:0,100', 'details.captured_at' => 'required|date']);
@@ -72,6 +79,9 @@ class RequestController extends Controller
             if (! $details['inside_zone']) {
                 throw ValidationException::withMessages(['location' => 'You are outside the assigned zone or the location accuracy is insufficient.']);
             }
+        }
+        if ($type === 'checkin') {
+            $data['entry_date'] = Carbon::parse($details['captured_at'])->setTimezone(config('app.timezone'))->toDateString();
         }
         $record = DB::transaction(function () use ($actor, $data, $type, $details, $request) {
             if (! empty($data['fund_request_id'])) {

@@ -343,6 +343,7 @@ class HttpApiService implements ApiService {
       'role': _mapLaravelRole(user['role']),
       'franchise_id': user['franchise_id']?.toString(),
       'franchise_name': user['franchise_name'],
+      'outlet_type': user['outlet_type'],
       'franchise_code': user['franchise_code'],
       'avatar_url': user['avatar_url'] ?? user['avatar'],
       'created_at': user['created_at'],
@@ -367,6 +368,10 @@ class HttpApiService implements ApiService {
         return 'franchisePartner';
       case 'Sales Head':
         return 'salesHead';
+      case 'Operations Manager':
+        return 'operationsManager';
+      case 'Office Sales':
+        return 'officeSales';
       case 'Field Agronomist':
         return 'fieldAgronomist';
       case 'Warehouse':

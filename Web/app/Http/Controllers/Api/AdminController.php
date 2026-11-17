@@ -117,12 +117,13 @@ class AdminController extends Controller
             'email' => 'nullable|email',
             'region' => 'required|string|max:100',
             'address' => 'nullable|string',
+            'outlet_type' => 'sometimes|in:own,appointed',
             'credit_limit' => 'nullable|numeric|min:0',
         ]);
 
         $franchise = Franchise::create($request->only([
             'name', 'code', 'contact_person', 'phone', 'email',
-            'region', 'address', 'credit_limit',
+            'region', 'address', 'outlet_type', 'credit_limit',
         ]));
 
         return response()->json(['message' => 'Franchise created.', 'data' => $franchise], 201);
@@ -144,13 +145,14 @@ class AdminController extends Controller
             'email' => 'nullable|email',
             'region' => 'sometimes|string|max:100',
             'address' => 'nullable|string',
+            'outlet_type' => 'sometimes|in:own,appointed',
             'credit_limit' => 'nullable|numeric|min:0',
             'is_active' => 'boolean',
         ]);
 
         $franchise->update($request->only([
             'name', 'contact_person', 'phone', 'email',
-            'region', 'address', 'credit_limit', 'is_active',
+            'region', 'address', 'outlet_type', 'credit_limit', 'is_active',
         ]));
 
         return response()->json(['message' => 'Franchise updated.', 'data' => $franchise->fresh()]);

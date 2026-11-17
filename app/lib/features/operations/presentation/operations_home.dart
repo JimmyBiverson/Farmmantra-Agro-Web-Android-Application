@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'outlet_work.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
@@ -19,6 +20,24 @@ import 'workspace_ui.dart';
 import 'knowledge_screen.dart';
 
 RoleWorkspace workspaceFor(UserRole? role) => switch (role) {
+  UserRole.operationsManager =>
+    RoleWorkspace('Operations manager', 'Weekly physical stock checks', [
+      WorkspaceAction(
+        'Count outlet stock',
+        'Compare physical pieces with system stock',
+        Icons.inventory,
+        (_) => const OutletWork(),
+      ),
+    ]),
+  UserRole.officeSales =>
+    RoleWorkspace('Office sales', 'Direct customer orders', [
+      WorkspaceAction(
+        'Record direct sale',
+        'Sell from your assigned outlet',
+        Icons.point_of_sale,
+        (_) => const OutletWork(office: true),
+      ),
+    ]),
   UserRole.systemAdministrator => adminWorkspace(),
   UserRole.salesHead => salesHeadWorkspace(),
   UserRole.fieldAgronomist => agronomistWorkspace(),
@@ -50,12 +69,14 @@ class OperationsHubScreen extends StatelessWidget {
         ),
         const SizedBox(height: 24),
         for (final action in config.actions)
-          WorkspaceTile(
-            title: action.title,
-            subtitle: action.subtitle,
-            icon: action.icon,
-            onTap: () => openWorkspace(context, action.builder(context)),
-          ),
+          if (action.title != 'Operations funds' ||
+              context.watch<AuthProvider>().user?.outletType == 'own')
+            WorkspaceTile(
+              title: action.title,
+              subtitle: action.subtitle,
+              icon: action.icon,
+              onTap: () => openWorkspace(context, action.builder(context)),
+            ),
       ],
     );
     return embedded
@@ -202,6 +223,12 @@ class _OperationsHomeState extends State<OperationsHome> {
     final role = context.watch<AuthProvider>().userRole;
     final config = workspaceFor(role);
     final metrics = <String, dynamic>{
+      if (data?['payments_month'] != null)
+        'Payments this month': data?['payments_month'],
+      if (data?['payments_today'] != null)
+        'Today’s payments': data?['payments_today'],
+      if (data?['overdue_amount'] != null)
+        'Overdue over 15 days': data?['overdue_amount'],
       if (role == UserRole.franchisePartner)
         'Stock value': data?['stock_value'],
       if (role == UserRole.franchisePartner)
@@ -223,7 +250,7 @@ class _OperationsHomeState extends State<OperationsHome> {
         if (!widget.compact)
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: workspaceGreen,
               borderRadius: BorderRadius.circular(26),
@@ -256,12 +283,7 @@ class _OperationsHomeState extends State<OperationsHome> {
                     color: Colors.white,
                   ),
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  config.subtitle,
-                  style: const TextStyle(color: Color(0xffe2ebdf), height: 1.5),
-                ),
-                const SizedBox(height: 22),
+                const SizedBox(height: 8),
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
@@ -292,6 +314,68 @@ class _OperationsHomeState extends State<OperationsHome> {
                 ),
               ),
             ),
+          ),
+        for (final plan in data?['field_progress'] ?? [])
+          ListTile(
+            title: Text(plan['title']),
+            subtitle: Text(
+              [
+                plan['period'],
+                plan['activity'],
+                plan['status'],
+              ].whereType<String>().join(' · '),
+            ),
+          ),
+        for (final order in data?['pending_invoices'] ?? [])
+          ListTile(
+            title: Text('EFRIS invoice due · ${order['order_number']}'),
+            trailing: const Icon(Icons.receipt_long),
+            onTap: () async {
+              String reference = '';
+              final result = await showDialog<String>(
+                context: context,
+                builder: (dialog) => AlertDialog(
+                  title: const Text('Record issued EFRIS invoice'),
+                  content: TextField(
+                    maxLength: 100,
+                    onChanged: (v) => reference = v,
+                    decoration: const InputDecoration(
+                      labelText: 'Invoice reference',
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(dialog),
+                      child: const Text('Cancel'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(dialog, reference.trim()),
+                      child: const Text('Save'),
+                    ),
+                  ],
+                ),
+              );
+              if (result == null || result.isEmpty || !mounted) return;
+              try {
+                await api.post('operations/invoices/${order['id']}', {
+                  'reference': result,
+                });
+                await load();
+              } catch (e) {
+                if (mounted) setState(() => error = operationError(e));
+              }
+            },
+          ),
+        if ((data?['top_customers'] as List?)?.isNotEmpty == true)
+          ExpansionTile(
+            title: const Text('Top customers by sales'),
+            children: [
+              for (final row in data!['top_customers'])
+                ListTile(
+                  title: Text(row['name']),
+                  trailing: Text(Formatters.currency(row['total'])),
+                ),
+            ],
           ),
         if (metrics.isNotEmpty)
           Padding(

@@ -11,6 +11,7 @@ class User {
   final UserRole role;
   final String? franchiseId;
   final String? franchiseName;
+  final String? outletType;
   final String? franchiseCode;
   final String? avatarUrl;
   final DateTime? createdAt;
@@ -33,6 +34,7 @@ class User {
     this.franchiseId,
     this.franchiseName,
     this.franchiseCode,
+    this.outletType,
     this.avatarUrl,
     this.createdAt,
     this.isActive = true,
@@ -58,6 +60,7 @@ class User {
       franchiseId: json['franchise_id']?.toString(),
       franchiseName: json['franchise_name'],
       franchiseCode: json['franchise_code'],
+      outletType: json['outlet_type'],
       avatarUrl: resolvedAvatar.isEmpty ? null : resolvedAvatar,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'])
@@ -83,6 +86,7 @@ class User {
       'franchise_id': franchiseId,
       'franchise_name': franchiseName,
       'franchise_code': franchiseCode,
+      'outlet_type': outletType,
       'avatar_url': avatarUrl,
       'created_at': createdAt?.toIso8601String(),
       'is_active': isActive,
@@ -113,6 +117,7 @@ class User {
       franchiseId: franchiseId,
       franchiseName: franchiseName,
       franchiseCode: franchiseCode,
+      outletType: outletType,
       avatarUrl: avatarUrl ?? this.avatarUrl,
       createdAt: createdAt,
       isActive: isActive ?? this.isActive,
