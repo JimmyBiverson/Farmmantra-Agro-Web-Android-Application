@@ -30,22 +30,13 @@ class FranchiseDashboard extends StatefulWidget {
 
 class _FranchiseDashboardState extends State<FranchiseDashboard> {
   bool _isLoading = true;
-  final PageController _pageController = PageController();
-  int _currentBannerIndex = 0;
   Map<String, dynamic>? _summary;
   String? _summaryError;
   Timer? _summaryTimer;
   bool _summaryLoading = false;
 
   // Local brand imagery carries no stock, price or promotion claims.
-  static const List<Map<String, dynamic>> _bannerSlides = [
-    {
-      'image': 'assets/images/farmmantra-fields.png',
-      'tag': 'GROWING TOGETHER',
-      'title': 'Your growing business',
-      'subtitle': 'One connected Farmmantra workspace',
-    },
-  ];
+
   @override
   void initState() {
     super.initState();
@@ -61,7 +52,7 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
   @override
   void dispose() {
     _summaryTimer?.cancel();
-    _pageController.dispose();
+
     super.dispose();
   }
 
@@ -235,40 +226,6 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
             ),
           ),
 
-          // ── Image Banner Slider ──────────────────────────────────
-          SizedBox(
-            height: 130,
-            child: PageView.builder(
-              controller: _pageController,
-              onPageChanged: (idx) => setState(() => _currentBannerIndex = idx),
-              itemCount: _bannerSlides.length,
-              itemBuilder: (context, index) => _buildBannerSlide(index),
-            ),
-          ),
-
-          // ── Indicator Dots ───────────────────────────────────────
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                _bannerSlides.length,
-                (i) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  width: _currentBannerIndex == i ? 20 : 6,
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: _currentBannerIndex == i
-                        ? Colors.white
-                        : Colors.white38,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
           // ── Quick Actions ────────────────────────────────────────
           const Divider(color: Colors.white24, height: 1),
           Padding(
@@ -318,98 +275,6 @@ class _FranchiseDashboardState extends State<FranchiseDashboard> {
     );
   }
 
-  Widget _buildBannerSlide(int index) {
-    final slide = _bannerSlides[index];
-    final hasImage = slide['image'] != null;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(14),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Background: actual image or solid color fallback
-            if (hasImage)
-              Image.asset(
-                slide['image'] as String,
-                fit: BoxFit.cover,
-                errorBuilder: (_, e, s) => Container(
-                  color: Color(slide['color'] as int? ?? 0xFF1B5E20),
-                ),
-              )
-            else
-              Container(color: Color(slide['color'] as int? ?? 0xFF1B5E20)),
-
-            // Gradient overlay for text legibility
-            Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerRight,
-                  end: Alignment.centerLeft,
-                  colors: [Colors.transparent, Colors.black.withAlpha(180)],
-                ),
-              ),
-            ),
-
-            // Text content
-            Positioned(
-              left: 14,
-              bottom: 14,
-              right: 60,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 7,
-                      vertical: 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.primaryGreen.withAlpha(200),
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    child: Text(
-                      slide['tag'] as String,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 0.6,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    slide['title'] as String,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  Text(
-                    slide['subtitle'] as String,
-                    style: const TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                      shadows: [Shadow(blurRadius: 3, color: Colors.black38)],
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
   Widget _buildQuickActionButton({
     required IconData icon,

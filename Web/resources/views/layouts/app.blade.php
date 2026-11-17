@@ -322,7 +322,7 @@
     <link rel="stylesheet" href="{{ asset('farmmantra.css') }}">
     @yield('head')
 </head>
-<body class="h-full" x-data="{ sidebarOpen: false }">
+<body @keydown.escape.window="sidebarOpen = false" class="h-full" x-data="{ sidebarOpen: false }">
 
     {{-- Mobile overlay --}}
     <div x-show="sidebarOpen" x-cloak class="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden transition-opacity" @click="sidebarOpen = false" x-transition:enter="transition ease-out duration-200" x-transition:leave="transition ease-in duration-150"></div>

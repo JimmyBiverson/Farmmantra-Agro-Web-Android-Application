@@ -1,3 +1,4 @@
+import 'widgets/common/workspace_bottom_bar.dart';
 import 'features/operations/presentation/operations_home.dart';
 import 'dart:async';
 import 'providers/site_settings_provider.dart';
@@ -36,6 +37,7 @@ class _FarmmantraAppState extends State<FarmmantraApp>
     with WidgetsBindingObserver {
   GoRouter? _router;
   Timer? _brandingTimer;
+  final _pages = WorkspaceRouteObserver();
 
   @override
   void initState() {
@@ -72,7 +74,7 @@ class _FarmmantraAppState extends State<FarmmantraApp>
     super.didChangeDependencies();
     final auth = context.read<AuthProvider>();
     _router ??= GoRouter(
-      navigatorKey: NotificationService.navigatorKey,
+
       refreshListenable: auth,
       initialLocation: '/',
       redirect: (context, state) {
@@ -109,6 +111,20 @@ class _FarmmantraAppState extends State<FarmmantraApp>
         return authorized ? null : _home(auth);
       },
       routes: [
+        GoRoute(path: '/', builder: (_, state) => const SplashScreen()),
+        GoRoute(path: '/login', builder: (_, state) => const LoginScreen()),
+        GoRoute(path: '/terms', builder: (_, state) => const TermsScreen()),
+        ShellRoute(
+          navigatorKey: NotificationService.navigatorKey,
+          observers: [_pages],
+          builder: (context, state, child) => WorkspaceFrame(
+            observer: _pages,
+            home: _home(auth),
+            location: state.uri.path,
+            child: child,
+          ),
+          routes: [
+
         GoRoute(
           path: '/operations',
           builder: (_, state) => const OperationsHubScreen(),
@@ -137,9 +153,6 @@ class _FarmmantraAppState extends State<FarmmantraApp>
           path: '/warehouse/dashboard',
           builder: (_, state) => const WarehouseShell(),
         ),
-        GoRoute(path: '/', builder: (_, state) => const SplashScreen()),
-        GoRoute(path: '/login', builder: (_, state) => const LoginScreen()),
-        GoRoute(path: '/terms', builder: (_, state) => const TermsScreen()),
         GoRoute(
           path: '/franchise/dashboard',
           builder: (_, state) => const FranchiseShell(),
@@ -176,6 +189,8 @@ class _FarmmantraAppState extends State<FarmmantraApp>
         GoRoute(
           path: '/staff/orders/detail',
           redirect: (_, state) => '/staff/order-detail?id=${_id(state)}',
+        ),
+          ],
         ),
       ],
       errorBuilder: (_, state) => const Scaffold(
