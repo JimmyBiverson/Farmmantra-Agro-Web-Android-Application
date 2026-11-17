@@ -224,6 +224,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'api.role', 'franchise.active'])->prefix('operations')->group(function () {
+    Route::get('/stock-checks/{check}/photo', [StockCheckController::class, 'photo'])->whereNumber('check');
     Route::get('/stock-checks/outlets', [StockCheckController::class, 'outlets']);
     Route::get('/stock-checks/outlets/{franchise}', [StockCheckController::class, 'inventory']);
     Route::post('/stock-checks', [StockCheckController::class, 'store']);

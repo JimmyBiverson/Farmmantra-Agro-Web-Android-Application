@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../../providers/auth_provider.dart';
@@ -159,9 +160,34 @@ class _FieldZonesScreenState extends State<FieldZonesScreen> {
       ),
     );
     if (activity == null || !mounted) return;
+    final withPhoto = await showDialog<bool>(
+      context: context,
+      builder: (d) => SimpleDialog(
+        title: const Text('Visit photograph'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(d, true),
+            child: const Text('Take photograph'),
+          ),
+          SimpleDialogOption(
+            onPressed: () => Navigator.pop(d, false),
+            child: const Text('Check in without a photograph'),
+          ),
+        ],
+      ),
+    );
+    if (withPhoto == null || !mounted) return;
     setState(() => busy = true);
     final api = operationsApi(context);
     try {
+      final photo = withPhoto
+          ? await ImagePicker().pickImage(
+              source: ImageSource.camera,
+              maxWidth: 1400,
+              imageQuality: 75,
+            )
+          : null;
+      if (withPhoto && photo == null) return;
       final location = await operationsPlatform
           .invokeMapMethod<String, dynamic>('location');
       if (location == null) {
@@ -170,22 +196,29 @@ class _FieldZonesScreenState extends State<FieldZonesScreen> {
           message: 'No location available.',
         );
       }
-      await api.post('operations/requests', {
-        'type': 'checkin',
-        'title': 'Visit · ${zone['name']}',
-        'entry_date': DateTime.now().toIso8601String().split('T').first,
-        'details': {
-          'category': activity,
-          'zone_id': zone['id'],
-          'latitude': location['latitude'],
-          'longitude': location['longitude'],
-          'accuracy': location['accuracy'],
-          'captured_at': DateTime.fromMillisecondsSinceEpoch(
-            (location['timestamp'] as num).toInt(),
-            isUtc: true,
-          ).toIso8601String(),
+      await api.upload(
+        'operations/requests',
+        {
+          'type': 'checkin',
+          'title': 'Visit · ${zone['name']}',
+          'entry_date': DateTime.now().toIso8601String().split('T').first,
+          'details': {
+            'category': activity,
+            'zone_id': zone['id'],
+            'latitude': location['latitude'],
+            'longitude': location['longitude'],
+            'accuracy': location['accuracy'],
+            'captured_at': DateTime.fromMillisecondsSinceEpoch(
+              (location['timestamp'] as num).toInt(),
+              isUtc: true,
+            ).toIso8601String(),
+          },
         },
-      });
+        files: {
+          if (photo != null)
+            'receipt': [OperationsFile(photo.name, await photo.readAsBytes())],
+        },
+      );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Field check-in recorded.')),

@@ -19,6 +19,7 @@ use App\Services\OrderService;
 use App\Services\PaymentService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -100,6 +101,20 @@ class NovemberRequirementsTest extends TestCase
         $this->postJson($url, ['reference' => 'EFRIS-1'])->assertOk();
         $this->postJson($url, ['reference' => 'EFRIS-2'])->assertConflict();
         $this->getJson('/api/v1/operations/dashboard')->assertJsonMissing(['order_number' => 'INV-TEST']);
+    }
+
+    public function test_matching_geofenced_activity_counts_toward_the_right_week_and_category(): void
+    {
+        $this->travelTo(Carbon::parse('2026-11-17 10:00:00'));
+        $this->login('sales');
+        $zone = FieldZone::create(['name' => 'Retail site', 'active' => true, 'latitude' => 0.1, 'longitude' => 32, 'radius_meters' => 500, 'user_id' => $this->actors['sales']->id]);
+        $this->postJson('/api/v1/operations/requests', ['type' => 'travel', 'title' => 'Retail visit', 'entry_date' => '2026-11-15', 'details' => ['week_start' => '2026-11-15', 'zone_id' => $zone->id, 'category' => 'Retailer visit', 'itinerary' => 'Retail site']])->assertCreated();
+        $visit = ['type' => 'checkin', 'title' => 'Field activity', 'entry_date' => '2026-11-17', 'details' => ['zone_id' => $zone->id, 'category' => 'Farmer visit', 'latitude' => 0.1, 'longitude' => 32, 'accuracy' => 5, 'captured_at' => now()->toIso8601String()]];
+        $this->postJson('/api/v1/operations/requests', $visit)->assertCreated();
+        $this->getJson('/api/v1/operations/dashboard')->assertJsonPath('data.activity_totals.0.retail_verified', 0);
+        $visit['details']['category'] = 'Retailer visit';
+        $this->postJson('/api/v1/operations/requests', $visit)->assertCreated();
+        $this->getJson('/api/v1/operations/dashboard')->assertJsonPath('data.activity_totals.0.retail_planned', 1)->assertJsonPath('data.activity_totals.0.retail_verified', 1)->assertJsonPath('data.activity_totals.1.verified', 1)->assertJsonPath('data.activity_totals.2.verified', 0);
     }
 
     public function test_order_reviews_are_sequential_and_do_not_mutate_stock(): void

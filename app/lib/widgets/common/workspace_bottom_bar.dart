@@ -8,9 +8,10 @@ class WorkspaceRouteObserver extends NavigatorObserver {
   void didChangeTop(Route<dynamic> topRoute, Route<dynamic>? previousTopRoute) {
     if (topRoute is PopupRoute) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (topRoute.isCurrent)
+      if (topRoute.isCurrent) {
         detail.value =
             topRoute is MaterialPageRoute && topRoute.settings is! Page;
+      }
     });
   }
 }

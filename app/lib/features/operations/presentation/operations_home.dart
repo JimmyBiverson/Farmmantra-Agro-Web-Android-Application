@@ -315,6 +315,13 @@ class _OperationsHomeState extends State<OperationsHome> {
               ),
             ),
           ),
+        for (final total in data?['activity_totals'] ?? [])
+          ListTile(
+            title: Text('${total['period']} · field activity'),
+            subtitle: Text(
+              '${total['verified']} of ${total['planned']} planned activities verified · ${total['retail_verified']} of ${total['retail_planned']} retailer visits',
+            ),
+          ),
         for (final plan in data?['field_progress'] ?? [])
           ListTile(
             title: Text(plan['title']),

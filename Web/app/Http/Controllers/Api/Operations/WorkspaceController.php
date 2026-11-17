@@ -92,8 +92,19 @@ class WorkspaceController extends Controller
             ? Order::whereNotNull('closed_at')->whereNull('efris_reference')->orderBy('closed_at')->get(['id', 'order_number'])
             : [];
 
+        $field = ($actor->isAgronomist() || $actor->isSalesHead()) ? $this->fieldProgress($actor) : [];
+        $totals = [];
+        if ($actor->isAgronomist() || $actor->isSalesHead()) {
+            foreach (['This week', 'This month', 'Last week'] as $period) {
+                $rows = collect($field)->where('period', $period);
+                $retail = $rows->where('activity', 'Retailer visit');
+                $totals[] = ['period' => $period, 'planned' => $rows->count(), 'verified' => $rows->where('status', 'Visit verified')->count(), 'retail_planned' => $retail->count(), 'retail_verified' => $retail->where('status', 'Visit verified')->count()];
+            }
+        }
+
         return response()->json(['data' => [
-            'field_progress' => ($actor->isAgronomist() || $actor->isSalesHead()) ? $this->fieldProgress($actor) : [],
+            'activity_totals' => $totals,
+            'field_progress' => $field,
             'payments_month' => $financial ? (float) (clone $payments)->whereBetween('accepted_at', [now()->startOfMonth(), now()])->sum('verified_amount') : null,
             'payments_today' => $financial ? (float) (clone $payments)->whereDate('accepted_at', today())->sum('verified_amount') : null,
             'overdue_amount' => $financial ? $due->where('received_at', '<', now()->subDays(15))->sum(fn ($o) => max(0, ($o->received_amount ?? $o->total_amount) - $o->amount_paid)) : null,

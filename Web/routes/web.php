@@ -244,6 +244,7 @@ Route::get('/payment-proofs/{payment}', PaymentProofController::class)->middlewa
 Route::view('/workspace', 'operations.index')->middleware(AuthenticateWeb::class)->name('web.workspace');
 Route::middleware([AuthenticateWeb::class, 'api.role', 'franchise.active'])->prefix('workspace/data')->group(function () {
     Route::get('/orders', [StaffOrderController::class, 'index'])->middleware('api.role:Sales Head,System Administrator,Warehouse');
+    Route::get('/stock-checks/{check}/photo', [StockCheckController::class, 'photo'])->whereNumber('check');
     Route::get('/stock-checks/outlets', [StockCheckController::class, 'outlets']);
     Route::get('/stock-checks/outlets/{franchise}', [StockCheckController::class, 'inventory']);
     Route::post('/stock-checks', [StockCheckController::class, 'store']);

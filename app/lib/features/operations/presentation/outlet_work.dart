@@ -104,7 +104,7 @@ class _OutletWorkState extends State<OutletWork> {
         evidence = {};
       }
     } catch (e) {
-      notice = operationError(e);
+      notice = e is StateError ? e.message : operationError(e);
       items = [];
       snapshot = null;
     } finally {
@@ -123,8 +123,9 @@ class _OutletWorkState extends State<OutletWork> {
       final fix = await operationsPlatform.invokeMapMethod<String, dynamic>(
         'location',
       );
-      if (fix == null)
+      if (fix == null) {
         throw StateError('Location required for the photograph.');
+      }
       final bytes = await file.readAsBytes();
       if (!mounted) return;
       setState(() {
@@ -165,17 +166,20 @@ class _OutletWorkState extends State<OutletWork> {
         await load();
         notice = 'Direct sale recorded.';
       } else {
-        if (snapshot == null || items.isEmpty)
+        if (snapshot == null || items.isEmpty) {
           throw StateError('Select an outlet with inventory.');
+        }
         final lines = <Map<String, dynamic>>[];
         for (final row in items) {
           final id = row['product_id'] as int;
           final count = counts[id];
-          if (count == null || count < 0)
+          if (count == null || count < 0) {
             throw StateError('Count every SKU in whole pieces.');
+          }
           if (count != double.parse(row['quantity'].toString()) &&
-              (remarks[id] ?? '').trim().isEmpty)
+              (remarks[id] ?? '').trim().isEmpty) {
             throw StateError('Explain each difference.');
+          }
           lines.add({'product_id': id, 'count': count, 'remark': remarks[id]});
         }
         final prefs = await SharedPreferences.getInstance();
@@ -205,7 +209,7 @@ class _OutletWorkState extends State<OutletWork> {
         }
       }
     } catch (e) {
-      notice = operationError(e);
+      notice = e is StateError ? e.message : operationError(e);
     } finally {
       if (mounted) setState(() => busy = false);
     }

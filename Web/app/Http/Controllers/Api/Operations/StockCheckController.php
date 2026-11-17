@@ -11,8 +11,10 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class StockCheckController extends Controller
 {
@@ -20,7 +22,16 @@ class StockCheckController extends Controller
     {
         $this->authorizeManager($request);
 
-        return response()->json(['data' => Franchise::where('is_active', true)->orderBy('name')->get(['id', 'name']), 'recent' => DB::table('stock_checks')->join('franchises', 'franchises.id', '=', 'stock_checks.franchise_id')->orderByDesc('counted_at')->limit(30)->get(['franchises.name', 'counted_at', 'lines'])]);
+        return response()->json(['data' => Franchise::where('is_active', true)->orderBy('name')->get(['id', 'name']), 'recent' => DB::table('stock_checks')->join('franchises', 'franchises.id', '=', 'stock_checks.franchise_id')->orderByDesc('counted_at')->limit(30)->selectRaw('stock_checks.id, franchises.name, counted_at, lines, CASE WHEN photo IS NULL THEN 0 ELSE 1 END as has_photo')->get()]);
+    }
+
+    public function photo(Request $request, int $check): BinaryFileResponse
+    {
+        $this->authorizeManager($request);
+        $file = DB::table('stock_checks')->where('id', $check)->value('photo');
+        abort_unless($file && Storage::disk('local')->exists($file), 404);
+
+        return response()->file(Storage::disk('local')->path($file), ['Cache-Control' => 'private, no-store']);
     }
 
     public function inventory(Request $request, Franchise $franchise): JsonResponse

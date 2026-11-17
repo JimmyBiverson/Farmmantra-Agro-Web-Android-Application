@@ -521,8 +521,9 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                     try {
                       final fix = await operationsPlatform
                           .invokeMapMethod<String, dynamic>('location');
-                      if (fix == null)
+                      if (fix == null) {
                         throw StateError('Location unavailable.');
+                      }
                       photoFix = {
                         'latitude': fix['latitude'],
                         'longitude': fix['longitude'],
@@ -532,10 +533,11 @@ class _RequestFormScreenState extends State<RequestFormScreen> {
                         ).toIso8601String(),
                       };
                     } catch (e) {
-                      if (context.mounted)
+                      if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(content: Text(operationError(e))),
                         );
+                      }
                       return;
                     }
                     final bytes = await file.readAsBytes();
