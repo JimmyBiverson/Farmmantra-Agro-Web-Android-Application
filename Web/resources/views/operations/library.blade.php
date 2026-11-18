@@ -3,7 +3,7 @@
 @section('page-title', 'Knowledge library')
 @section('content')
 <nav class="flex flex-wrap gap-3 mb-4" aria-label="Knowledge libraries">
-@foreach(['crop'=>'Crop knowledge','product'=>'Product knowledge'] as $key=>$label)
+@foreach(['crop'=>'Crop knowledge','product'=>'Product knowledge','prices'=>'Price list'] as $key=>$label)
 <a class="btn-primary" @if($kind===$key) aria-current="page" @endif href="{{ route('web.knowledge',['kind'=>$key]) }}">{{ $label }}</a>
 @endforeach
 </nav>
@@ -13,8 +13,29 @@
 <label>Crop<select name="crop"><option value="">All crops</option>@foreach($crops as $crop)<option @selected(($filters['crop']??'')===$crop)>{{ $crop }}</option>@endforeach</select></label>
 @endif
 <label>Product category<select name="category"><option value="">All categories</option>@foreach($categories as $category)<option value="{{ $category->id }}" @selected(($filters['category']??null)==$category->id)>{{ $category->name }}</option>@endforeach</select></label>
-<button class="btn-primary">Find guidance</button>
+<button class="btn-primary">{{ $kind === 'prices' ? 'Filter prices' : 'Find guidance' }}</button>
 </form>
+@if($kind === 'prices')
+<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 mb-4">
+    @forelse($products as $product)
+        <article class="card-full p-4">
+            <h2 class="font-bold">{{ $product->name }}</h2>
+            <p class="text-sm mb-3">{{ $product->sku }}@if($product->packaging_details) · {{ $product->packaging_details }}@endif</p>
+            <dl class="grid grid-cols-2 gap-2 text-sm">
+                @foreach(['Farmer' => $product->farmer_unit_price, 'Retailer' => $product->retail_price, 'Franchise' => $product->franchise_price] as $customer => $price)
+                    <dt>{{ $customer }}</dt><dd class="text-right">UGX {{ number_format($price, 2) }}</dd>
+                @endforeach
+            </dl>
+            @if($product->price_changed_at)
+                <p class="mt-3 text-xs">Price changed <time datetime="{{ substr($product->price_changed_at, 0, 10) }}">{{ substr($product->price_changed_at, 0, 10) }}</time></p>
+            @endif
+        </article>
+    @empty
+        <p>No active products match this selection.</p>
+    @endforelse
+</div>
+{{ $products->links() }}
+@else
 <div class="grid gap-4 md:grid-cols-2">
 @forelse($articles as $article)
 <details class="card-full p-4"><summary class="font-bold">{{ $article->title }} · {{ $article->category?->name }}</summary>
@@ -25,4 +46,5 @@
 @endforeach</dl></details>
 @empty<p>No published guidance matches this selection.</p>@endforelse</div>
 {{ $articles->links() }}
+@endif
 @endsection

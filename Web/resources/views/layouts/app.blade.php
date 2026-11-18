@@ -11,7 +11,7 @@
     @if(!empty($site['site_favicon_url']))
     <link rel="icon" href="{{ $site['site_favicon_url'] }}">
     @else
-    <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
+    <link rel="icon" type="image/png" href="{{ asset('images/farmmantra-icon.png') }}">
     @endif
 
     {{-- Dynamic OG Meta Tags --}}

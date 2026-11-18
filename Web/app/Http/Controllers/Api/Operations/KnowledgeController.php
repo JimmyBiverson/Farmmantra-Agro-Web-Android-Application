@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\Operations;
 use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\KnowledgeArticle;
+use App\Models\Product;
 use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,8 +16,18 @@ class KnowledgeController extends Controller
 {
     public function library(Request $request): View
     {
-        $filters = $request->validate(['kind' => 'sometimes|in:crop,product', 'crop' => 'nullable|string|max:100', 'category' => 'nullable|integer']);
+        $filters = $request->validate(['kind' => 'sometimes|in:crop,product,prices', 'crop' => 'nullable|string|max:100', 'category' => 'nullable|integer']);
         $kind = $filters['kind'] ?? 'crop';
+        if ($kind === 'prices') {
+            $catalogue = Product::where('is_active', true);
+            $categories = Category::whereIn('id', (clone $catalogue)->select('category_id'))->orderBy('name')->get();
+            $products = $catalogue
+                ->when($filters['category'] ?? null, fn ($query, $category) => $query->where('category_id', $category))
+                ->orderBy('name')->orderBy('sku')->paginate(20)->withQueryString();
+
+            return view('operations.library', compact('filters', 'kind', 'categories', 'products'));
+        }
+
         $query = KnowledgeArticle::where('published', true)->where('kind', $kind);
         $crops = (clone $query)->whereNotNull('crop')->distinct()->orderBy('crop')->pluck('crop');
         if ($kind === 'crop' && filled($filters['crop'] ?? null)) {

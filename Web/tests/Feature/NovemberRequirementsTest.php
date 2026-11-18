@@ -186,6 +186,26 @@ class NovemberRequirementsTest extends TestCase
         $this->postJson('/api/v1/operations/knowledge', $data)->assertForbidden();
     }
 
+    public function test_web_price_list_shows_active_sku_prices_and_price_change_date(): void
+    {
+        $this->product->update(['farmer_price' => 1500]);
+        $this->actingAs($this->actors['field']);
+
+        $this->get(route('web.knowledge', ['kind' => 'prices', 'category' => $this->product->category_id]))
+            ->assertOk()
+            ->assertSee('NOV-1')
+            ->assertSee('UGX 1,500.00')
+            ->assertSee('UGX 1,200.00')
+            ->assertSee('UGX 1,000.00')
+            ->assertSee('Price changed')
+            ->assertSee(substr($this->product->fresh()->price_changed_at, 0, 10));
+
+        $this->product->update(['is_active' => false]);
+        $this->get(route('web.knowledge', ['kind' => 'prices']))
+            ->assertOk()
+            ->assertDontSee('NOV-1');
+    }
+
     public function test_return_stock_and_credit_wait_for_physical_receipt(): void
     {
         $order = $this->place();
