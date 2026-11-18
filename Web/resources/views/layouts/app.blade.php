@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en" class="h-full" x-data="theme()" :class="{ 'dark': dark }">
 <head>
+    <meta name="robots" content="noindex, nofollow">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="fm-user" content="{{ auth()->id() }}"><meta name="fm-reverb-key" content="{{ config('broadcasting.connections.reverb.key') }}"><meta name="fm-reverb-port" content="{{ config('broadcasting.connections.reverb.options.port') }}"><meta name="fm-reverb-scheme" content="{{ config('broadcasting.connections.reverb.options.scheme') }}">
@@ -290,8 +291,8 @@
         .fade-number { transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
 
         @media (max-width: 1024px) {
-            .sidebar { transform: translateX(-100%); width: 280px; max-width: 85vw; }
-            .sidebar.open { transform: translateX(0); box-shadow: 0 0 60px rgba(0,0,0,0.5); }
+            .sidebar { transform: translateX(-100%); visibility: hidden; width: 280px; max-width: 85vw; transition: transform .3s ease, visibility .3s; }
+            .sidebar.open { transform: translateX(0); visibility: visible; box-shadow: 0 0 60px rgba(0,0,0,0.5); }
             .main-content { margin-left: 0; }
         }
         @media (max-width: 480px) {
@@ -303,7 +304,7 @@
             .main-content { width: 100%; max-width: 100vw; min-width: 0; overflow-x: hidden; }
             .topbar { width: 100%; max-width: 100vw; }
             .sidebar { overflow: hidden; }
-            aside.sidebar.open { transform: translateX(0) !important; }
+
             .sidebar nav { min-height: 0; flex-shrink: 1; overflow-y: auto; overflow-x: hidden; padding-bottom: 1rem; }
             .sidebar nav ul { flex-shrink: 0; }
             main { min-width: 0; max-width: 100%; overflow-x: hidden; }
@@ -322,13 +323,16 @@
     <link rel="stylesheet" href="{{ asset('farmmantra.css') }}">
     @yield('head')
 </head>
-<body @keydown.escape.window="sidebarOpen = false" class="h-full" x-data="{ sidebarOpen: false }">
+<body class="h-full" x-data="{ sidebarOpen: false, sidebarCollapsed: false, mobile: matchMedia('(max-width: 1024px)').matches }"
+    :class="{ 'fm-collapsed': sidebarCollapsed }"
+    @resize.window="mobile = matchMedia('(max-width: 1024px)').matches; if (!mobile) sidebarOpen = false"
+    @keydown.escape.window="if (sidebarOpen) { sidebarOpen = false; $refs.navigationToggle.focus() }">
 
     {{-- Mobile overlay --}}
-    <div x-show="sidebarOpen" x-cloak class="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 lg:hidden transition-opacity" @click="sidebarOpen = false" x-transition:enter="transition ease-out duration-200" x-transition:leave="transition ease-in duration-150"></div>
+    <div x-show="sidebarOpen" x-cloak class="fixed inset-0 bg-black/40 backdrop-blur-sm z-30 transition-opacity" @click="sidebarOpen = false; $refs.navigationToggle.focus()" x-transition:enter="transition ease-out duration-200" x-transition:leave="transition ease-in duration-150"></div>
 
     {{-- Sidebar --}}
-    <aside class="sidebar" :class="{ 'open': sidebarOpen }" :style="sidebarOpen ? 'transform: translateX(0) !important' : ''">
+    <aside id="workspace-sidebar" x-ref="sidebar" class="sidebar" :class="{ 'open': sidebarOpen }" :inert="mobile && !sidebarOpen">
         @include('partials.sidebar-nav')
     </aside>
 
@@ -337,7 +341,7 @@
         {{-- Topbar --}}
         <header class="topbar flex items-center px-3 sm:px-4 lg:px-6 justify-between">
             <div class="flex items-center gap-3">
-                <button aria-label="Toggle navigation" onclick="if(innerWidth>1024)document.body.classList.toggle('fm-collapsed')" @click="if(window.innerWidth<=1024) sidebarOpen = !sidebarOpen" class=" p-2 rounded-xl transition" onmouseover="this.style.background='var(--bg-input)'" onmouseout="this.style.background=''">
+                <button type="button" aria-label="Toggle navigation" aria-controls="workspace-sidebar" x-ref="navigationToggle" :aria-expanded="mobile ? sidebarOpen : !sidebarCollapsed" @click="if (mobile) { sidebarOpen = !sidebarOpen; if (sidebarOpen) $nextTick(() => $refs.sidebar.querySelector('a')?.focus()) } else sidebarCollapsed = !sidebarCollapsed" class="min-h-11 min-w-11 p-2 rounded-xl transition" onmouseover="this.style.background='var(--bg-input)'" onmouseout="this.style.background=''">
                     <i class="fas fa-bars" style="color:var(--text-muted)"></i>
                 </button>
                 <div class="hidden sm:block">

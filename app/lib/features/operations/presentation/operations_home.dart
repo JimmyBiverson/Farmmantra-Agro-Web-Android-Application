@@ -98,43 +98,33 @@ class _OperationsShellState extends State<OperationsShell> {
     final role = context.watch<AuthProvider>().userRole;
     return Scaffold(
       backgroundColor: workspaceBackground,
-      appBar: AppBar(
-        backgroundColor: workspaceBackground,
-        foregroundColor: workspaceGreen,
-        titleTextStyle: const TextStyle(
-          color: workspaceGreen,
-          fontSize: 20,
-          fontWeight: FontWeight.w700,
-        ),
-        centerTitle: false,
-        title: Text(
-          index == 0
-              ? 'Farmmantra'
-              : index == 1
-              ? 'My work'
-              : index == 2
-              ? 'Knowledge'
-              : 'My profile',
-        ),
-        actions: [
-          IconButton(
-            tooltip: 'Notifications',
-            icon: const Icon(Icons.notifications_none_rounded),
-            onPressed: () => openWorkspace(
-              context,
-              const WorkspacePage(
-                title: 'Notifications',
-                child: NotificationScreen(),
+      appBar: index == 3
+          ? null
+          : AppBar(
+              backgroundColor: workspaceBackground,
+              foregroundColor: workspaceGreen,
+              titleTextStyle: const TextStyle(
+                color: workspaceGreen,
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+              centerTitle: false,
+              title: Text(
+                index == 0
+                    ? 'Farmmantra'
+                    : index == 1
+                    ? 'My work'
+                    : index == 2
+                    ? 'Knowledge'
+                    : 'My profile',
               ),
             ),
-          ),
-        ],
-      ),
       body: SafeArea(
         child: switch (index) {
           0 => OperationsHome(key: ValueKey(role)),
           1 => const OperationsHubScreen(embedded: true),
           2 => const KnowledgeScreen(embedded: true),
+          3 => const NotificationScreen(),
           _ => const ProfileScreen(),
         },
       ),
@@ -156,6 +146,11 @@ class _OperationsShellState extends State<OperationsShell> {
             icon: Icon(Icons.menu_book_outlined),
             activeIcon: Icon(Icons.menu_book_rounded),
             label: 'Learn',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.notifications_outlined),
+            activeIcon: Icon(Icons.notifications),
+            label: 'Alerts',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.person_outline),

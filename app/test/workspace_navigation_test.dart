@@ -5,6 +5,56 @@ import 'package:go_router/go_router.dart';
 
 void main() {
   testWidgets(
+    'Home stays centered and other destinations retain their actions',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(320, 480));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      int? tapped;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            bottomNavigationBar: WorkspaceBottomBar(
+              currentIndex: 0,
+              onTap: (index) => tapped = index,
+              items: const [
+                BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.list),
+                  label: 'Orders',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.store),
+                  label: 'Stock',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.info),
+                  label: 'Alerts',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person),
+                  label: 'Profile',
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final home = find.byIcon(Icons.eco_outlined);
+      expect(tester.getCenter(home).dx, 160);
+      expect(
+        tester.getCenter(home).dy,
+        lessThan(tester.getCenter(find.byIcon(Icons.list)).dy),
+      );
+      await tester.tap(home);
+      expect(tapped, 0);
+      await tester.tap(find.byTooltip('Stock'));
+      expect(tapped, 2);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
     'Back and Home work on pushed screens and directly opened details',
     (tester) async {
       final observer = WorkspaceRouteObserver();

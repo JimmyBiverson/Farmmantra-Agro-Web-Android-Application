@@ -86,81 +86,146 @@ class WorkspaceBottomBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const green = Color(0xff26734e);
+    const green = Color(0xff2b805e);
+    final colors = Theme.of(context).colorScheme;
+    final raisedIndex = items.length ~/ 2;
+    final order = List<int>.generate(items.length, (index) => index);
+    final homeIndex = items.indexWhere(
+      (item) => item.label == 'Home' || item.label == 'Dashboard',
+    );
+    if (homeIndex >= 0) {
+      order.removeAt(homeIndex);
+      order.insert(raisedIndex, homeIndex);
+    }
+
     return SafeArea(
       top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 4, 12, 6),
-      child: Material(
-        color: Colors.white,
-        elevation: 4,
-        borderRadius: BorderRadius.circular(28),
-        child: Row(
-          children: [
-            for (var i = 0; i < items.length; i++)
-              Expanded(
-                child: Semantics(
-                  selected: i == currentIndex,
-                  button: true,
-                  label: items[i].label,
-                  child: Tooltip(
-                    message: items[i].label ?? '',
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(24),
-                      onTap: () => onTap(i),
-                      child: SizedBox(
-                        height: 58,
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Transform.translate(
-                              offset: Offset(
-                                0,
-                                i == items.length ~/ 2 ? -4 : 0,
-                              ),
-                              child: DecoratedBox(
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: i == items.length ~/ 2
-                                      ? green
-                                      : Colors.transparent,
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(6),
-                                  child: IconTheme(
-                                    data: IconThemeData(
-                                      size: 22,
-                                      color: i == items.length ~/ 2
-                                          ? Colors.white
-                                          : i == currentIndex
-                                          ? green
-                                          : Colors.blueGrey,
-                                    ),
-                                    child: i == currentIndex
-                                        ? items[i].activeIcon
-                                        : items[i].icon,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 160),
-                              width: i == currentIndex ? 12 : 4,
-                              height: 4,
-                              decoration: BoxDecoration(
-                                color: i == currentIndex
-                                    ? green
-                                    : Colors.transparent,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
+      minimum: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: SizedBox(
+            height: 72,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  top: 20,
+                  child: Material(
+                    color: colors.surface,
+                    elevation: 2,
+                    borderRadius: BorderRadius.circular(20),
                   ),
                 ),
+                Positioned.fill(
+                  child: Row(
+                    children: [
+                      for (var i = 0; i < items.length; i++)
+                        Expanded(
+                          child: _WorkspaceDestination(
+                            item: items[order[i]],
+                            raised: i == raisedIndex,
+                            selected: order[i] == currentIndex,
+                            green: green,
+                            onTap: () => onTap(order[i]),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _WorkspaceDestination extends StatelessWidget {
+  const _WorkspaceDestination({
+    required this.item,
+    required this.raised,
+    required this.selected,
+    required this.green,
+    required this.onTap,
+  });
+
+  final BottomNavigationBarItem item;
+  final bool raised;
+  final bool selected;
+  final Color green;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final icon = IconTheme(
+      data: IconThemeData(
+        size: 21,
+        color: raised
+            ? Colors.white
+            : selected
+            ? green
+            : colors.onSurfaceVariant,
+      ),
+      child: raised
+          ? const Icon(Icons.eco_outlined)
+          : (selected ? item.activeIcon : item.icon),
+    );
+
+    return Padding(
+      padding: EdgeInsets.only(top: raised ? 0 : 20),
+      child: Semantics(
+        label: item.label,
+        selected: selected,
+        button: true,
+        child: Tooltip(
+          message: item.label ?? '',
+          excludeFromSemantics: true,
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(20),
+              onTap: onTap,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  if (raised)
+                    DecoratedBox(
+                      decoration: BoxDecoration(
+                        color: green,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: colors.surface, width: 3),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x26000000),
+                            blurRadius: 5,
+                            offset: Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: SizedBox.square(
+                        dimension: 48,
+                        child: Center(child: icon),
+                      ),
+                    )
+                  else
+                    icon,
+                  const SizedBox(height: 5),
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 160),
+                    width: 5,
+                    height: 5,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: selected ? green : Colors.transparent,
+                    ),
+                  ),
+                ],
               ),
-          ],
+            ),
+          ),
         ),
       ),
     );
